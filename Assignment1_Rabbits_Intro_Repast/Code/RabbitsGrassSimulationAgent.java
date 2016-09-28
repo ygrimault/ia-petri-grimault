@@ -1,5 +1,8 @@
 import uchicago.src.sim.gui.Drawable;
 import uchicago.src.sim.gui.SimGraphics;
+import uchicago.src.sim.space.Object2DGrid;
+
+import java.awt.Color;
 
 
 /**
@@ -13,26 +16,82 @@ public class RabbitsGrassSimulationAgent implements Drawable {
 	private int x;
 	private int y;
 	private int energy;
+	private static int IDNumber = 0;
+	private int ID;
+	private RabbitsGrassSimulationSpace rSpace;
 
 	public RabbitsGrassSimulationAgent(){
 		x = -1;
 		y = -1;
 		energy = 42;
+		IDNumber++;
+		ID = IDNumber;
 	}
 
 	public void draw(SimGraphics arg0) {
-		// TODO Auto-generated method stub
-		
+		arg0.drawFastRoundRect(Color.lightGray);
+	}
+
+	public void setXY(int newX, int newY){
+		setX(newX);
+		setY(newY);
 	}
 
 	public int getX() {
-		// TODO Auto-generated method stub
-		return 0;
+		return x;
+	}
+
+	public void setX(int newX){
+		x = newX;
 	}
 
 	public int getY() {
-		// TODO Auto-generated method stub
-		return 0;
+		return y;
 	}
 
+	public void setY(int newY){
+		y = newY;
+	}
+
+	public int getEnergy(){
+		return energy;
+	}
+
+	public void setEnergy(int newEnergy){
+		energy = newEnergy;
+	}
+
+	public void setRabbitSpace(RabbitsGrassSimulationSpace rs){
+		rSpace = rs;
+	}
+
+	public void step(){
+		// Decide new direction
+		int dirX = 0;
+		int dirY = 0;
+		int dir = (int) (Math.random() * 4);
+
+		switch(dir){
+			case 0: //N
+				dirY = -1;
+				break;
+			case 1: //S
+				dirY = 1;
+				break;
+			case 2: //E
+				dirX = 1;
+				break;
+			case 3: //W
+				dirX = -1;
+				break;
+		}
+
+		Object2DGrid grid = rSpace.getCurrentRabbitSpace();
+		int newX = (x + dirX + grid.getSizeX()) % grid.getSizeX();
+		int newY = (y + dirY + grid.getSizeY()) % grid.getSizeY();
+		rSpace.moveRabbitAt(x, y, newX, newY);
+
+		energy += rSpace.eatGrassAt(x, y);
+		energy -= 2;
+	}
 }

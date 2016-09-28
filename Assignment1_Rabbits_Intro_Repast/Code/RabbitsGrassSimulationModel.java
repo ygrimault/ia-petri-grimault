@@ -5,9 +5,13 @@ import uchicago.src.sim.engine.SimModelImpl;
 import uchicago.src.sim.engine.SimInit;
 import uchicago.src.sim.gui.DisplaySurface;
 import uchicago.src.sim.gui.ColorMap;
+import uchicago.src.sim.gui.Object2DDisplay;
 import uchicago.src.sim.gui.Value2DDisplay;
+import uchicago.src.sim.engine.BasicAction;
+import uchicago.src.sim.util.SimUtilities;
 
 import java.awt.Color;
+import java.util.ArrayList;
 
 /**
  * Class that implements the simulation model for the rabbits grass
@@ -43,7 +47,10 @@ public class RabbitsGrassSimulationModel extends SimModelImpl {
     private RabbitsGrassSimulationSpace rSpace;
 
     /* Objects needed for display */
-    private DisplaySurface displayRab;
+    private DisplaySurface displaySurf;
+
+    /* List of Rabbits agents */
+    private ArrayList rabbitList;
 
     /* Get and Set methods of previous parameters */
 
@@ -110,17 +117,40 @@ public class RabbitsGrassSimulationModel extends SimModelImpl {
         buildSchedule();
         buildDisplay();
 
-        displayRab.display();
+        displaySurf.display();
     }
 
     public void buildModel() {
         // TODO
         rSpace = new RabbitsGrassSimulationSpace(gridWidth, gridHeight);
         rSpace.plantGrass(grassRate);
+
+        for (int i = 0; i < numRabbits; i++){
+            addNewRabbit();
+        }
     }
 
     public void buildSchedule() {
         // TODO
+        class RabbitStep extends BasicAction {
+            public void execute(){
+                SimUtilities.shuffle(rabbitList);
+                for(int i = 0; i < rabbitList.size(); i++){
+                    RabbitsGrassSimulationAgent rab = (RabbitsGrassSimulationAgent) rabbitList.get(i);
+                    // TODO insert actions here, like move, reproduce, die, add grass
+                    rab.step();
+                    if (rab.getEnergy() < 1){
+                        rSpace.removeRabbitAt(rab.getX(), rab.getY());
+                        rabbitList.remove(i);
+                    }
+                }
+
+                rSpace.plantGrass(grassRate);
+                displaySurf.updateDisplay();
+            }
+        }
+
+        schedule.scheduleActionBeginning(0, new RabbitStep());
     }
 
     public void buildDisplay() {
@@ -134,9 +164,22 @@ public class RabbitsGrassSimulationModel extends SimModelImpl {
             map.mapColor(i, new Color((int) (102. * (15.-(float)i)/15.), (int) (51. * (15.-(float)i)/15. + ((float)i/15.)*127.), 0));
         }
 
-        Value2DDisplay displayGrass = new Value2DDisplay(rSpace.getCurrentRabbitSpace(), map);
+        Value2DDisplay displayGrass = new Value2DDisplay(rSpace.getCurrentGrassSpace(), map);
 
-        displayRab.addDisplayable(displayGrass, "Grass");
+        Object2DDisplay displayRabbits = new Object2DDisplay(rSpace.getCurrentRabbitSpace());
+        displayRabbits.setObjectList(rabbitList);
+
+        displaySurf.addDisplayable(displayGrass, "Grass");
+        displaySurf.addDisplayable(displayRabbits, "Agents");
+    }
+
+    /**
+     * Add 1 rabbit to the list of rabbits. Does NOT place it into the space.
+     */
+    private void addNewRabbit(){
+        RabbitsGrassSimulationAgent r = new RabbitsGrassSimulationAgent();
+        rabbitList.add(r);
+        rSpace.addRabbit(r);
     }
 
     /**
@@ -184,12 +227,14 @@ public class RabbitsGrassSimulationModel extends SimModelImpl {
         // TODO Auto-generated method stub
         // MODIFIED
         rSpace = null;
+        rabbitList = new ArrayList();
+        schedule = new Schedule(1);
 
-        if (displayRab != null){
-            displayRab.dispose();
+        if (displaySurf != null){
+            displaySurf.dispose();
         }
-        displayRab = null;
-        displayRab = new DisplaySurface(this, "Rabbit eating grass model - Window 1");
-        registerDisplaySurface("Rabbit eating grass model - Window 1", displayRab);
+        displaySurf = null;
+        displaySurf = new DisplaySurface(this, "Rabbit eating grass model - Window 1");
+        registerDisplaySurface("Rabbit eating grass model - Window 1", displaySurf);
     }
 }
