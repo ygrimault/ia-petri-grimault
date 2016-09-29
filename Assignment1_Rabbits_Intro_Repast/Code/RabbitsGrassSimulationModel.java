@@ -153,6 +153,7 @@ public class RabbitsGrassSimulationModel extends SimModelImpl {
     }
 
     public void buildModel() {
+        rSpace = new RabbitsGrassSimulationSpace(gridWidth, gridHeight, maxShades);
         rSpace.plantGrass(grassRate);
 
         for (int i = 0; i < numRabbits; i++){
