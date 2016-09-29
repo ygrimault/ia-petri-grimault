@@ -108,4 +108,14 @@ public class RabbitsGrassSimulationSpace {
             rabbitSpace.putObjectAt(newX, newY, rab);
         }
     }
+
+    public int getTotalGrass(){
+        int totalGrass=0;
+        for (int i = 0; i < rabbitSpace.getSizeX(); i++) {
+            for (int j = 0; j < rabbitSpace.getSizeY(); j++) {
+                totalGrass+=getGrassAt(i,j);
+            }
+        }
+        return totalGrass;
+    }
 }

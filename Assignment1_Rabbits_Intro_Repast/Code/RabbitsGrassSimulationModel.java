@@ -8,9 +8,14 @@ import uchicago.src.sim.gui.ColorMap;
 import uchicago.src.sim.gui.Object2DDisplay;
 import uchicago.src.sim.gui.Value2DDisplay;
 import uchicago.src.sim.engine.BasicAction;
+import uchicago.src.sim.space.Object2DGrid;
 import uchicago.src.sim.util.SimUtilities;
+import uchicago.src.sim.analysis.DataSource;
+import uchicago.src.sim.analysis.OpenSequenceGraph;
+import uchicago.src.sim.analysis.Sequence;
 
 import java.awt.Color;
+import java.awt.geom.Arc2D;
 import java.util.ArrayList;
 
 /**
@@ -36,6 +41,9 @@ public class RabbitsGrassSimulationModel extends SimModelImpl {
     /* List of Rabbits agents */
     private ArrayList rabbitList;
 
+    /* Graph of amount of grass in space */
+    private OpenSequenceGraph amountOfGrassInSpace;
+
     /* Default values for the parameters */
     private static final int GRIDWIDTH = 20;
     private static final int GRIDHEIGHT = 20;
@@ -43,7 +51,7 @@ public class RabbitsGrassSimulationModel extends SimModelImpl {
     private static final int BIRTHRESH = 42;
     private static final int GRASSRATE = 42;
     private static final int EXHAUSTRATE = 2;
-    private static final int MAXSHADES = 255;
+    private static final int MAXSHADES = 50;
 
     /* Parameters of the simulation */
     public int gridWidth = GRIDWIDTH;
@@ -140,6 +148,30 @@ public class RabbitsGrassSimulationModel extends SimModelImpl {
     }
 
     /**
+     * grassInSpace implements Datasource and Sequence,
+     * It requires 2 methods, execute and getSValue which aims at returning
+     * the total amount of grass in the space
+     */
+    class grassInSpace implements DataSource,Sequence{
+        public Object execute(){
+            return new Double(getSValue());
+        }
+
+        public double getSValue(){
+            return (double)rSpace.getTotalGrass();
+        }
+    }
+
+    class rabbitsInSpace implements DataSource,Sequence{
+        public Object execute(){
+            return new Double(getSValue());
+        }
+
+        public double getSValue(){
+            return (double)rabbitList.size()*10.;
+        }
+    }
+    /**
      * Called when "Initialize" button is clicked
      * "Initialize" button -> simulation supposed uninitialized and initialize it
      * Commonly divided into 3 sub-methods
@@ -150,6 +182,7 @@ public class RabbitsGrassSimulationModel extends SimModelImpl {
         buildDisplay();
 
         displaySurf.display();
+        amountOfGrassInSpace.display();
     }
 
     public void buildModel() {
@@ -190,6 +223,14 @@ public class RabbitsGrassSimulationModel extends SimModelImpl {
         }
 
         schedule.scheduleActionBeginning(0, new RabbitStep());
+
+        class RabbitsUpdateGrassInSpace extends BasicAction{
+            public void execute(){
+                amountOfGrassInSpace.step();
+            }
+        }
+
+        schedule.scheduleActionAtInterval(10,new RabbitsUpdateGrassInSpace());
     }
 
     public void buildDisplay() {
@@ -215,6 +256,9 @@ public class RabbitsGrassSimulationModel extends SimModelImpl {
 
         displaySurf.addDisplayable(displayGrass, "Grass");
         displaySurf.addDisplayable(displayRabbits, "Agents");
+
+        amountOfGrassInSpace.addSequence("Grass In Space",new grassInSpace());
+        amountOfGrassInSpace.addSequence("Number of Rabbits times 10",new rabbitsInSpace());
     }
 
     /**
@@ -250,12 +294,23 @@ public class RabbitsGrassSimulationModel extends SimModelImpl {
         rSpace = null;
         rabbitList = new ArrayList();
         schedule = new Schedule(1);
-
+        //Dispose of the existing displays
         if (displaySurf != null){
             displaySurf.dispose();
         }
         displaySurf = null;
+
+        if (amountOfGrassInSpace!=null){
+            amountOfGrassInSpace.dispose();
+        }
+        amountOfGrassInSpace = null;
+
+        //Create Displays
         displaySurf = new DisplaySurface(this, "Rabbit eating grass model - Window 1");
+        amountOfGrassInSpace = new OpenSequenceGraph("Plot",this);
+
+        //Register Displays
         registerDisplaySurface("Rabbit eating grass model - Window 1", displaySurf);
+        this.registerMediaProducer("Plot",amountOfGrassInSpace);
     }
 }
