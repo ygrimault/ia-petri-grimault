@@ -16,16 +16,18 @@ public class RabbitsGrassSimulationAgent implements Drawable {
 	private int x;
 	private int y;
 	private int energy;
-	private static int IDNumber = 0;
-	private int ID;
+//	private static int IDNumber = 0;
+//	private int ID;
 	private RabbitsGrassSimulationSpace rSpace;
+	private int exhaust;
 
-	public RabbitsGrassSimulationAgent(){
+	public RabbitsGrassSimulationAgent(int exhaustRate){
 		x = -1;
 		y = -1;
 		energy = 42;
-		IDNumber++;
-		ID = IDNumber;
+//		IDNumber++;
+//		ID = IDNumber;
+		exhaust = exhaustRate;
 	}
 
 	public void draw(SimGraphics arg0) {
@@ -92,6 +94,6 @@ public class RabbitsGrassSimulationAgent implements Drawable {
 		rSpace.moveRabbitAt(x, y, newX, newY);
 
 		energy += rSpace.eatGrassAt(x, y);
-		energy -= 2;
+		energy -= exhaust;
 	}
 }

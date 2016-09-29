@@ -24,10 +24,17 @@ import java.util.ArrayList;
 
 
 public class RabbitsGrassSimulationModel extends SimModelImpl {
-
-    // MODIFIED
-    /* Schedule object. Might be renamed for clarification */
+    /* Schedule object */
     private Schedule schedule;
+
+    /* The Space object where we run the model */
+    private RabbitsGrassSimulationSpace rSpace;
+
+    /* Object needed for display */
+    private DisplaySurface displaySurf;
+
+    /* List of Rabbits agents */
+    private ArrayList rabbitList;
 
     /* Default values for the parameters */
     private static final int GRIDWIDTH = 20;
@@ -35,22 +42,17 @@ public class RabbitsGrassSimulationModel extends SimModelImpl {
     private static final int NUMRABBITS = 42;
     private static final int BIRTHRESH = 42;
     private static final int GRASSRATE = 42;
+    private static final int EXHAUSTRATE = 2;
+    private static final int MAXSHADES = 255;
 
     /* Parameters of the simulation */
     public int gridWidth = GRIDWIDTH;
     public int gridHeight = GRIDHEIGHT;
     public int numRabbits = NUMRABBITS;
-    public int birThresh = BIRTHRESH; // Could become a double (or something else) depending on how we implement the energy
-    public int grassRate = GRASSRATE; // Could become an int (or something else) depending on how we implement the grass growth rate
-
-    /* The Space object where we run the model */
-    private RabbitsGrassSimulationSpace rSpace;
-
-    /* Objects needed for display */
-    private DisplaySurface displaySurf;
-
-    /* List of Rabbits agents */
-    private ArrayList rabbitList;
+    public int birThresh = BIRTHRESH;
+    public int grassRate = GRASSRATE;
+    public int exhaustRate = EXHAUSTRATE;
+    public int maxShades = MAXSHADES;
 
     /* Get and Set methods of previous parameters */
 
@@ -94,11 +96,43 @@ public class RabbitsGrassSimulationModel extends SimModelImpl {
         this.grassRate = grassRate;
     }
 
+    public int getMaxShades(){
+        return maxShades;
+    }
+
+    public void setMaxShades(int maxShades){
+        this.maxShades = maxShades;
+    }
+
+    public int getExhaustRate(){
+        return exhaustRate;
+    }
+
+    public void setExhaustRate(int exhaustRate){
+        this.exhaustRate = exhaustRate;
+    }
+
+    /**
+     * This returns a list of all parameters that can be modified when running the simulation.
+     * The parameters must be named like exampleParam, have get and set methods named getExampleParam and setExampleParam
+     *  respectively, and the corresponding string in initParams must be named "ExampleParam"
+     * @return List of parameters names
+     */
+    public String[] getInitParam() {
+        String[] initParams = { "GridWidth",
+                "GridHeight",
+                "NumRabbits",
+                "BirThresh",
+                "GrassRate",
+                "ExhaustRate",
+                "MaxShades" };
+        return initParams;
+    }
+
     public static void main(String[] args) {
 
         System.out.println("Rabbit skeleton");
 
-        // MODIFIED
         SimInit init = new SimInit();
         RabbitsGrassSimulationModel model = new RabbitsGrassSimulationModel();
         init.loadModel(model, "", false);
@@ -111,8 +145,6 @@ public class RabbitsGrassSimulationModel extends SimModelImpl {
      * Commonly divided into 3 sub-methods
      */
     public void begin() {
-        // TODO Auto-generated method stub
-        // MODIFIED
         buildModel();
         buildSchedule();
         buildDisplay();
@@ -121,8 +153,6 @@ public class RabbitsGrassSimulationModel extends SimModelImpl {
     }
 
     public void buildModel() {
-        // TODO
-        rSpace = new RabbitsGrassSimulationSpace(gridWidth, gridHeight);
         rSpace.plantGrass(grassRate);
 
         for (int i = 0; i < numRabbits; i++){
@@ -131,14 +161,22 @@ public class RabbitsGrassSimulationModel extends SimModelImpl {
     }
 
     public void buildSchedule() {
-        // TODO
         class RabbitStep extends BasicAction {
             public void execute(){
                 SimUtilities.shuffle(rabbitList);
                 for(int i = 0; i < rabbitList.size(); i++){
                     RabbitsGrassSimulationAgent rab = (RabbitsGrassSimulationAgent) rabbitList.get(i);
-                    // TODO insert actions here, like move, reproduce, die, add grass
+
+                    // Internal evolution of the rabbit and movement
                     rab.step();
+
+                    // Rabbit reproduce
+                    if (rab.getEnergy() >= birThresh){
+                        addNewRabbit();
+                        rab.setEnergy(rab.getEnergy() - birThresh*9/10);
+                    }
+
+                    // Rabbit DEAD
                     if (rab.getEnergy() < 1){
                         rSpace.removeRabbitAt(rab.getX(), rab.getY());
                         rabbitList.remove(i);
@@ -154,14 +192,19 @@ public class RabbitsGrassSimulationModel extends SimModelImpl {
     }
 
     public void buildDisplay() {
-        // TODO
         ColorMap map = new ColorMap();
 
         map.mapColor(0, new Color(102, 51, 0));
 
-        // What happens for i >= 16 ?!! We might need to create a function to handle this case
-        for(int i = 1; i<16; i++){
-            map.mapColor(i, new Color((int) (102. * (15.-(float)i)/15.), (int) (51. * (15.-(float)i)/15. + ((float)i/15.)*127.), 0));
+        // Depending on the quantity of grass in the cell, the color linearly goes on a scale from brown (102,51,0) to green (0,127,0)
+        // However, if the level of grass goes too high, this causes a malfunction and black cells appear at the top-left corner of the grid
+        // This also causes little columns of cells to act as one (same level of grass, and everything is eaten is one is).
+        // We didn't take the time to look into it and simply increased the maximum number of shades.
+        for(int i = 1; i<=maxShades; i++){
+            map.mapColor(i,
+                    new Color((int) (102. * ((float)(maxShades-i))/((float)(maxShades))),
+                            (int) (51. * (float)(((float)(maxShades-i))/((float)(maxShades))) + (float)(((float)i)/((float)(maxShades))*127.)),
+                            0));
         }
 
         Value2DDisplay displayGrass = new Value2DDisplay(rSpace.getCurrentGrassSpace(), map);
@@ -177,26 +220,9 @@ public class RabbitsGrassSimulationModel extends SimModelImpl {
      * Add 1 rabbit to the list of rabbits. Does NOT place it into the space.
      */
     private void addNewRabbit(){
-        RabbitsGrassSimulationAgent r = new RabbitsGrassSimulationAgent();
+        RabbitsGrassSimulationAgent r = new RabbitsGrassSimulationAgent(exhaustRate);
         rabbitList.add(r);
         rSpace.addRabbit(r);
-    }
-
-    /**
-     * This returns a list of all parameters that can be modified when running the simulation.
-     * The parameters must be named like exampleParam, have get and set methods named getExampleParam and setExampleParam
-     *  respectively, and the corresponding string in initParams must be named "ExampleParam"
-     * @return List of parameters names
-     */
-    public String[] getInitParam() {
-        // TODO Auto-generated method stub
-        // MODIFIED
-        String[] initParams = { "GridWidth",
-                                "GridHeight",
-                                "NumRabbits",
-                                "BirThresh",
-                                "GrassRate" };
-        return initParams;
     }
 
     /**
@@ -204,8 +230,6 @@ public class RabbitsGrassSimulationModel extends SimModelImpl {
      * @return Name of simulation
      */
     public String getName() {
-        // TODO Auto-generated method stub
-        // MODIFIED
         return "Petri and Grimault's Rabbits simulation";
     }
 
@@ -214,8 +238,6 @@ public class RabbitsGrassSimulationModel extends SimModelImpl {
      * @return Schedule of the simulation
      */
     public Schedule getSchedule() {
-        // TODO Auto-generated method stub
-        // MODIFIED
         return schedule;
     }
 
@@ -224,8 +246,6 @@ public class RabbitsGrassSimulationModel extends SimModelImpl {
      * "Setup" button -> returns the simulation to the uninitialized state
      */
     public void setup() {
-        // TODO Auto-generated method stub
-        // MODIFIED
         rSpace = null;
         rabbitList = new ArrayList();
         schedule = new Schedule(1);

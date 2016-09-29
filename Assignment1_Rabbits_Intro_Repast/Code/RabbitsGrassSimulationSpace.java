@@ -8,11 +8,14 @@ import uchicago.src.sim.space.Object2DGrid;
 public class RabbitsGrassSimulationSpace {
     private Object2DGrid grassSpace;
     private Object2DGrid rabbitSpace;
+    private int maxRate;
 
     // We initialize the grid with Doubles representing the grass. It could be any Object though.
-    public RabbitsGrassSimulationSpace(int xSize, int ySize) {
+    public RabbitsGrassSimulationSpace(int xSize, int ySize, int maxGrass) {
         grassSpace = new Object2DGrid(xSize, ySize);
         rabbitSpace = new Object2DGrid(xSize, ySize);
+
+        maxRate = maxGrass;
 
         for (int i=0; i<xSize; i++){
             for (int j=0; j<ySize; j++){
@@ -31,8 +34,10 @@ public class RabbitsGrassSimulationSpace {
 
             // Get the value of the object at those coordinates
             int currentRate = getGrassAt(x, y);
-            // Replace the Integer object with another one with the new value
-            grassSpace.putObjectAt(x,y,new Integer(currentRate + 1));
+            // Replace the Integer object with another one with the new value if and only if the maximum value isn't reached yet (otherwise, do nothing)
+            if (currentRate < maxRate) {
+                grassSpace.putObjectAt(x, y, new Integer(currentRate + 1));
+            }
         }
     }
 
@@ -40,8 +45,7 @@ public class RabbitsGrassSimulationSpace {
         int i;
         if(grassSpace.getObjectAt(x,y)!= null){
             i = ((Integer) grassSpace.getObjectAt(x,y)).intValue();
-        }
-        else{
+        } else{
             i = 0;
         }
         return i;
@@ -62,6 +66,7 @@ public class RabbitsGrassSimulationSpace {
     }
 
     public boolean addRabbit(RabbitsGrassSimulationAgent rabbit){
+        // We try to put a Rabbit at a random place, with a maximum number of try
         boolean retVal = false;
         int count = 0;
         int countLimit = 10 * rabbitSpace.getSizeX() * rabbitSpace.getSizeY();
@@ -88,12 +93,14 @@ public class RabbitsGrassSimulationSpace {
     }
 
     public int eatGrassAt(int x, int y){
+        // Rabbits are gluttons and eat everything
         int grass = getGrassAt(x, y);
         grassSpace.putObjectAt(x, y, new Integer(0));
         return grass;
     }
 
     public void moveRabbitAt(int x, int y, int newX, int newY){
+        // If there is already a rabbit at the desired location, the movement is simply cancelled
         if(!isCellOccupied(newX, newY)){
             RabbitsGrassSimulationAgent rab = (RabbitsGrassSimulationAgent) rabbitSpace.getObjectAt(x, y);
             removeRabbitAt(x, y);
