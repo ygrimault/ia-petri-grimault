@@ -20,6 +20,7 @@ public class RabbitsGrassSimulationAgent implements Drawable {
 //	private int ID;
 	private RabbitsGrassSimulationSpace rSpace;
 	private int exhaust;
+	private boolean newlyBorn;
 
 	public RabbitsGrassSimulationAgent(int exhaustRate){
 		x = -1;
@@ -28,6 +29,7 @@ public class RabbitsGrassSimulationAgent implements Drawable {
 //		IDNumber++;
 //		ID = IDNumber;
 		exhaust = exhaustRate;
+		newlyBorn = true;
 	}
 
 	public void draw(SimGraphics arg0) {
@@ -61,6 +63,14 @@ public class RabbitsGrassSimulationAgent implements Drawable {
 
 	public void setEnergy(int newEnergy){
 		energy = newEnergy;
+	}
+
+	public boolean getNewlyBorn(){
+		return newlyBorn;
+	}
+
+	public void setNewlyBorn(boolean newNewlyBorn){
+		newlyBorn = newNewlyBorn;
 	}
 
 	public void setRabbitSpace(RabbitsGrassSimulationSpace rs){

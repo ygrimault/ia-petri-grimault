@@ -201,19 +201,23 @@ public class RabbitsGrassSimulationModel extends SimModelImpl {
                 for(int i = 0; i < rabbitList.size(); i++){
                     RabbitsGrassSimulationAgent rab = (RabbitsGrassSimulationAgent) rabbitList.get(i);
 
-                    // Internal evolution of the rabbit and movement
-                    rab.step();
+                    if (!rab.getNewlyBorn()) {
+                        // Internal evolution of the rabbit and movement
+                        rab.step();
 
-                    // Rabbit reproduce
-                    if (rab.getEnergy() >= birThresh){
-                        addNewRabbit();
-                        rab.setEnergy(rab.getEnergy() - birThresh*9/10);
-                    }
+                        // Rabbit reproduce
+                        if (rab.getEnergy() >= birThresh){
+                            addNewRabbit();
+                            rab.setEnergy(rab.getEnergy() - birThresh*9/10);
+                        }
 
-                    // Rabbit DEAD
-                    if (rab.getEnergy() < 1){
-                        rSpace.removeRabbitAt(rab.getX(), rab.getY());
-                        rabbitList.remove(i);
+                        // Rabbit DEAD
+                        if (rab.getEnergy() < 1){
+                            rSpace.removeRabbitAt(rab.getX(), rab.getY());
+                            rabbitList.remove(i);
+                        }
+                    } else {
+                        rab.setNewlyBorn(false);
                     }
                 }
 
@@ -266,8 +270,9 @@ public class RabbitsGrassSimulationModel extends SimModelImpl {
      */
     private void addNewRabbit(){
         RabbitsGrassSimulationAgent r = new RabbitsGrassSimulationAgent(exhaustRate);
-        rabbitList.add(r);
-        rSpace.addRabbit(r);
+        if(rSpace.addRabbit(r)) {
+            rabbitList.add(r);
+        }
     }
 
     /**
