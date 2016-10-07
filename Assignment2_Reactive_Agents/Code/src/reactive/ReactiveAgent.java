@@ -36,6 +36,20 @@ public class ReactiveAgent implements ReactiveBehavior {
 			curCity = initialCity;
 			curTask = initialTask;
 		}
+
+		@Override
+		public boolean equals(Object state){
+			return ((this.curCity == ((State) state).curCity) && (this.curTask == ((State) state).curTask));
+		}
+
+		@Override
+		public int hashCode(){
+			if(curTask != null) {
+				return curCity.id * 10000000 + curTask.id;
+			} else {
+				return curCity.id * 10000000;
+			}
+		}
 	}
 
 	private class ActionReward{
@@ -49,6 +63,11 @@ public class ReactiveAgent implements ReactiveBehavior {
 
 		public void addReward(double adding){
 			reward += adding;
+		}
+
+		@Override
+		public boolean equals(Object q){
+			return ((this.action == ((ActionReward) q).action) && (this.reward == ((ActionReward) q).reward));
 		}
 	}
 
@@ -74,10 +93,6 @@ public class ReactiveAgent implements ReactiveBehavior {
 			strategy.put(s, new ActionReward(0, 0.0));
 		}
 
-		for (State s : strategy.keySet()){
-			System.out.println("State : " + s.curCity + "," + s.curTask + ". Value : " + strategy.get(s).action + ":" + strategy.get(s).reward);
-		}
-
 		// Initial computation to find best strategy at each point
 		for (int i = 0; i < 42; i++) {
 			Map<State, ActionReward> new_strategy = new HashMap<State, ActionReward>();
@@ -92,20 +107,22 @@ public class ReactiveAgent implements ReactiveBehavior {
 					for (City newTask : topology){
                         Q.addReward(discount *
                                 td.probability(s.curTask, newTask) *
-                                strategy.get(allStates.stream()
-													.filter(state -> (state.curCity == s.curTask && state.curTask == newTask))
-													.findFirst()
-													.get())
-										.reward);
+								strategy.get(new State(s.curTask, newTask)).reward);
+//                                strategy.get(allStates.stream()
+//													.filter(state -> (state.curCity == s.curTask && state.curTask == newTask))
+//													.findFirst()
+//													.get())
+//										.reward);
                     }
                     // Don't forget the case where there is no task available
                     Q.addReward(discount *
 								td.probability(s.curTask, null) *
-								strategy.get(allStates.stream()
-													.filter(state -> (state.curCity == s.curTask && state.curTask == null))
-													.findFirst()
-													.get())
-										.reward);
+								strategy.get(new State(s.curTask, null)).reward);
+//								strategy.get(allStates.stream()
+//													.filter(state -> (state.curCity == s.curTask && state.curTask == null))
+//													.findFirst()
+//													.get())
+//										.reward);
 				} else {
 					// Make sure other actions have something to compare to
 					Q = new ActionReward(-1, -1.0);
@@ -120,26 +137,24 @@ public class ReactiveAgent implements ReactiveBehavior {
 
 						// Sum part of the formula (Move actions imply R(s,a) = 0)
 						for (City newTask : topology){
-                            try {
-                                tmpQ.addReward(discount *
-                                        td.probability(nextCity, newTask) *
-                                        strategy.get(allStates.stream()
-                                                            .filter(state -> (state.curCity == nextCity && state.curTask == newTask))
-                                                            .findFirst()
-                                                            .get())
-                                                .reward);
-                            } catch (NullPointerException e) {
-                                System.out.println("curCity : " + nextCity + ". newTask : " + newTask);
-                            }
+							tmpQ.addReward(discount *
+                                    td.probability(nextCity, newTask) *
+									strategy.get(new State(nextCity, newTask)).reward);
+//                                    strategy.get(allStates.stream()
+//                                                        .filter(state -> (state.curCity == nextCity && state.curTask == newTask))
+//                                                        .findFirst()
+//                                                        .get())
+//                                            .reward);
                         }
 						// Don't forget the case where there is no task available
 						Q.addReward(discount *
                                     td.probability(nextCity, null) *
-                                    strategy.get(allStates.stream()
-                                                        .filter(state -> (state.curCity == nextCity && state.curTask == null))
-                                                        .findFirst()
-                                                        .get())
-                                            .reward);
+									strategy.get(new State(nextCity, null)).reward);
+//                                    strategy.get(allStates.stream()
+//                                                        .filter(state -> (state.curCity == nextCity && state.curTask == null))
+//                                                        .findFirst()
+//                                                        .get())
+//                                            .reward);
 
 						// Check if better reward
 						if (tmpQ.reward > Q.reward){
