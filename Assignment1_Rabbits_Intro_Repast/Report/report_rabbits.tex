@@ -4,6 +4,8 @@
 \usepackage{textcomp}
 \usepackage[top=0.8in, bottom=0.8in, left=0.8in, right=0.8in]{geometry}
 % Add other packages here %
+\usepackage{graphicx}
+\graphicspath{ {Images/} }
 
 
 
@@ -19,8 +21,47 @@
 \subsection{Assumptions}
 % Describe the assumptions of your world model and implementation (e.g. is the grass amount bounded in each cell) %
 
+Our world model works as follows :
+
+\begin{itemize}
+\item At the start, we spawn \textsc{NumRabbits} on different cells, and we plant a total of \textsc{GrassRate} portions of grass, dispatched randomly all around the grid (one cell being able to hold up to \textsc{MaxShades} portions).
+\item Then, at each update of the world, we do the following things for each rabbit successively (we shuffle the list of rabbits each time so their are no VIRs (Very Important Rabbits)) :
+\begin{itemize}
+\item We move the rabbit in one of the 4 directions (NSEW) at random. If there is already a rabbit in the desired location, then the movement is cancelled.
+\item We transfer all the grass in the cell of the rabbit to its \textsc{energy}, with a ratio of 1:1.
+\item We reduce the \textsc{energy} of the rabbit by \textsc{ExhaustRate}.
+\item We check if the resulting \textsc{energy} of the rabbit is superior to \textsc{BirThresh}, in which case we drastically reduce it and spawn a new rabbit in the world.
+\item We check if the \textsc{energy} of the rabbit is less than 0, in which case we kill it.
+\end{itemize}
+\item After having gone through all the rabbits one by one, we replant a total of \textsc{GrassRate} portions of grass, still with respect to the \textsc{MaxShades} limit.
+\end{itemize}
+
+You can also note that cells are colored brown when there is nothing in the cell and greener the more portions of grass there is, while they are grey when a rabbit is in the cell.
+
+\vspace{5mm}
+
+Here are a few points we could have done if we had more time and motivation (but added nothing interesting regarding the assignment) :
+
+\begin{itemize}
+\item Plant a different number of portions of grass each time, with a high amount at the start to quickly reach a balance.
+\item Experiment another function for exhaust (instead of a continuous loss, we could have reduce the loss if the rabbit ate a lot this round).
+\item Make the exhaust due to reproduction more flexible than a constant in the code.
+\item Spawn each rabbit with a random amount of \textsc{energy}.
+\item Control the amount of grass eaten (in our implementation, a rabbit eats all the grass in its cell).
+\end{itemize}
+
 \subsection{Implementation Remarks}
 % Provide important details about your implementation, such as handling of boundary conditions %
+
+The key points in the code are :
+
+\begin{itemize}
+\item We use a linear scale for coloring the cells depending on the amount of grass in it, which explains the shared variable \textsc{MaxShades} in the \textbf{Model} and \textsc{maxRate} in the \textbf{Space}.
+\item When adding a portion of grass, we first check if there isn't already too much grass in the cell, in which case the portion of grass is simply lost.
+\item However, when trying to spawn a new rabbit, if there is already a rabbit in the chosen cell, we choose a new cell at random (no memory), up to 10x(20x20) tries (depending on the grid size, 20x20 by default).
+\item When moving a rabbit, the rabbit \textbf{Agent} sends a request to the space to be moved in a direction the \textbf{Agent} chose, but if there is already a rabbit there, the \textbf{Space} denies the movement.
+\item When doing the actions of the rabbits, we need to check whether he was just born or not, because if he is spawned with more \textsc{energy} than \textsc{BirThresh}, it will spawn a new rabbit, then another one,... Hence the variable \textsc{newlyBorn}.
+\end{itemize}
 
 \section{Results}
 % In this section, you study and describe how different variables (e.g. birth threshold, grass growth rate etc.) or combinations of variables influence the results. Different experiments with diffrent settings are described below with your observations and analysis
@@ -28,24 +69,77 @@
 \subsection{Experiment 1}
 
 \subsubsection{Setting}
-
+\begin{tabular}{ |c|c| }
+ \hline
+ Parameters & Value \\
+ \hline\hline
+ \textsc{BirThresh} & 42 \\
+ \textsc{ExhaustRate} & 2 \\
+ \textsc{GrassRate} & 42 \\
+ \textsc{GridHeight} & 20 \\
+ \textsc{GridWidth} & 20 \\
+ \textsc{MaxShade} & 50 \\
+ \textsc{NumRabbits} & 42 \\
+ \hline
+\end{tabular}
 \subsubsection{Observations}
-% Elaborate on the observed results %
+\begin{tabular}{|c c|}
+\includegraphics[scale=0.1]{RabbitsExp1.png}&\includegraphics[scale=0.1]{PlotExp1.png}
+\end{tabular}
+
+\vspace{5mm}
+
+This is a set of parameters that allows us to reach a balanced state. After around 200 ticks of transition state, numbers of rabbits and grass start oscillating, the maximums of one corresponding to the minimums of the other. This is logic considering that if we have more rabbits alive, they eat more grass.
+
 
 \subsection{Experiment 2}
 
 \subsubsection{Setting}
-
+\begin{tabular}{ |c|c| }
+ \hline
+ Parameters & Value \\
+ \hline\hline
+ \textsc{BirThresh} & 42 \\
+ \textsc{ExhaustRate} & 3 \\
+ \textsc{GrassRate} & 42 \\
+ \textsc{GridHeight} & 20 \\
+ \textsc{GridWidth} & 20 \\
+ \textsc{MaxShade} & 50 \\
+ \textsc{NumRabbits} & 42 \\
+ \hline
+\end{tabular}
 \subsubsection{Observations}
 % Elaborate on the observed results %
+\begin{tabular}{|c c|}
+\includegraphics[scale=0.1]{RabbitsExp2.png}&\includegraphics[scale=0.1]{PlotExp2.png}
+\end{tabular}
 
-\vdots
+\vspace{5mm}
 
-\subsection{Experiment n}
+This is a set of parameters where all rabbits die quite fast. After the rabbits died, grass start groing at a linear rate (textsc{GrassRate} per tick).
+
+\subsection{Experiment 3}
 
 \subsubsection{Setting}
-
+\begin{tabular}{ |c|c| }
+ \hline
+ Parameters & Value \\
+ \hline\hline
+ \textsc{BirThresh} & 38 \\
+ \textsc{ExhaustRate} & 2 \\
+ \textsc{GrassRate} & 42 \\
+ \textsc{GridHeight} & 20 \\
+ \textsc{GridWidth} & 20 \\
+ \textsc{MaxShade} & 50 \\
+ \textsc{NumRabbits} & 42 \\
+ \hline
+\end{tabular}
 \subsubsection{Observations}
 % Elaborate on the observed results %
+\begin{tabular}{|c c|}
+\includegraphics[scale=0.1]{RabbitsExp3.png}&\includegraphics[scale=0.1]{PlotExp3.png}
+\end{tabular}
+
+This set of parameters is choosed so that the newborn rabbits have enough energy to reproduce right at their second tick of life. This cause that the space is fast overcrowded by rabbits and grass don't have any room to grow.
 
 \end{document}

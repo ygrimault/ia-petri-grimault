@@ -16,13 +16,11 @@ import java.util.*;
 
 public class ReactiveAgent implements ReactiveBehavior {
 
-	private double disFactor;
 	private int numActions;
 	private Agent myAgent;
 	private Topology topology;
 
 	private List<State> allStates;
-	private List<Integer> allActions;
 	private Map<State, ActionReward> strategy;
 
 	/**
@@ -92,9 +90,11 @@ public class ReactiveAgent implements ReactiveBehavior {
 		for (State s : allStates){
 			strategy.put(s, new ActionReward(0, 0.0));
 		}
-
+		double test = 5e30;
+		int nbIter = 0;
+		double precision = 0.01;
 		// Initial computation to find best strategy at each point
-		for (int i = 0; i < 42; i++) {
+		while (test > precision && nbIter<100000) {
 			Map<State, ActionReward> new_strategy = new HashMap<State, ActionReward>();
 			for (State s : allStates){
 				ActionReward Q;
@@ -102,59 +102,39 @@ public class ReactiveAgent implements ReactiveBehavior {
 				if (s.curTask != null) {
 					// First action : Pickup (=-1)
 
-					Q = new ActionReward(-1, (double) td.reward(s.curCity, s.curTask));
+					Q = new ActionReward(-1,(double)td.reward(s.curCity, s.curTask) / (s.curCity.distanceUnitsTo(s.curTask)+1) );
 					// Sum part of the formula
 					for (City newTask : topology){
                         Q.addReward(discount *
                                 td.probability(s.curTask, newTask) *
 								strategy.get(new State(s.curTask, newTask)).reward);
-//                                strategy.get(allStates.stream()
-//													.filter(state -> (state.curCity == s.curTask && state.curTask == newTask))
-//													.findFirst()
-//													.get())
-//										.reward);
                     }
                     // Don't forget the case where there is no task available
                     Q.addReward(discount *
 								td.probability(s.curTask, null) *
 								strategy.get(new State(s.curTask, null)).reward);
-//								strategy.get(allStates.stream()
-//													.filter(state -> (state.curCity == s.curTask && state.curTask == null))
-//													.findFirst()
-//													.get())
-//										.reward);
 				} else {
 					// Make sure other actions have something to compare to
 					Q = new ActionReward(-1, -1.0);
 				}
 
-				// All other actions : move to city j if it's a neighboor
+				// All other actions : move to city j if it's a neighbor
 
 				for (int j = 0; j < totalCities; j++) {
 					City nextCity = topology.cities().get(j);
 					if (s.curCity.neighbors().contains(nextCity)) {
-						ActionReward tmpQ = new ActionReward(j, 0.0);
+						ActionReward tmpQ = new ActionReward(j,0);
 
 						// Sum part of the formula (Move actions imply R(s,a) = 0)
 						for (City newTask : topology){
 							tmpQ.addReward(discount *
                                     td.probability(nextCity, newTask) *
 									strategy.get(new State(nextCity, newTask)).reward);
-//                                    strategy.get(allStates.stream()
-//                                                        .filter(state -> (state.curCity == nextCity && state.curTask == newTask))
-//                                                        .findFirst()
-//                                                        .get())
-//                                            .reward);
                         }
 						// Don't forget the case where there is no task available
-						Q.addReward(discount *
+						tmpQ.addReward(discount *
                                     td.probability(nextCity, null) *
 									strategy.get(new State(nextCity, null)).reward);
-//                                    strategy.get(allStates.stream()
-//                                                        .filter(state -> (state.curCity == nextCity && state.curTask == null))
-//                                                        .findFirst()
-//                                                        .get())
-//                                            .reward);
 
 						// Check if better reward
 						if (tmpQ.reward > Q.reward){
@@ -165,7 +145,11 @@ public class ReactiveAgent implements ReactiveBehavior {
 
 				new_strategy.put(s, Q);
 			}
-
+			test=0;
+			for (State s : allStates){
+				test+=Math.sqrt(Math.pow(new_strategy.get(s).reward-strategy.get(s).reward,2));
+			}
+			nbIter++;
 			strategy = new_strategy;
 		}
 
@@ -173,20 +157,10 @@ public class ReactiveAgent implements ReactiveBehavior {
 		for (State s : strategy.keySet()){
 			System.out.println("State : " + s.curCity + ", " + s.curTask + ". Value : " + strategy.get(s).action + " : " + strategy.get(s).reward);
 		}
-
-		this.disFactor = discount;
+		System.out.println(nbIter);
 		this.numActions = 0;
 		this.myAgent = agent;
 		this.topology = topology;
-	}
-
-	public double reward(State state, Action action, TaskDistribution td){
-		if(action instanceof Pickup){
-			return td.reward(state.curCity, state.curTask);
-		} else {
-			// We don't take into account the cost of the move
-			return 0.0;
-		}
 	}
 
 	@Override
@@ -195,15 +169,9 @@ public class ReactiveAgent implements ReactiveBehavior {
 
 		ActionReward Q;
 		if (availableTask != null) {
-			Q = strategy.get(allStates.stream()
-                                .filter(state -> (state.curCity == vehicle.getCurrentCity() && state.curTask == availableTask.deliveryCity))
-                                .findFirst()
-                                .get());
+			Q = strategy.get(new State(vehicle.getCurrentCity(), availableTask.deliveryCity));
 		} else {
-			Q = strategy.get(allStates.stream()
-					.filter(state -> (state.curCity == vehicle.getCurrentCity() && state.curTask == null))
-					.findFirst()
-					.get());
+			Q = strategy.get(new State(vehicle.getCurrentCity(), null));
 		}
 
 		if(Q.action == -1){
