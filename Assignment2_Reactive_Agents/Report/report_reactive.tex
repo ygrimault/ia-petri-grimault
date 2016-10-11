@@ -1,0 +1,66 @@
+\documentclass[11pt]{article}
+
+\usepackage{amsmath}
+\usepackage{textcomp}
+\usepackage[top=0.8in, bottom=0.8in, left=0.8in, right=0.8in]{geometry}
+% add other packages here
+
+% put your group number and names in the author field
+\title{\bf Exercise 2: A Reactive Agent for the Pickup and Delivery Problem}
+\author{Group \textnumero:3 Yannick Grimault, Vincent Petri}
+
+% the report should not be longer than 3 pages
+
+\begin{document}
+\maketitle
+
+\section{Problem Representation}
+
+\subsection{Representation Description}
+% describe how you design the state representation, the possible actions, the reward table and the probability transition table
+
+We choose for our state representation that $s$ would be a pair $(City,Task)$. Here $City$ represents the current city in which the agent is and $Task$ is the destination of the proposed task. If no task is provided, $Task = null$.
+
+The different action that our agent can take in a state is either accept the proposed task if one is provided or move to a neighbour city. The reward table is defined as follow :
+\begin{itemize}
+\item $R(s,a)=0$ for move action
+\item $R(s,a)=r(a)/D $ for pickup actions where $r(a)$ is the given reward for the action and $D$ is the distance between the two cities 
+\end{itemize}
+
+With this representation $T(s,a,s')=p(NewCity,NewTask)$ with $s'=(NewCity,NewTask)$
+
+\subsection{Implementation Details}
+% describe the implementation details of the representations above and the implementation details of the reinforcement learning algorithm you implemented
+In our implementation we choose to repeat the learning process for a maximum of $100000$ iteration or when the difference in V(S) between two iteration is smaller than $0.01$
+
+\section{Results}
+% in this section, you describe several results from the experiments with your reactive agent
+
+\subsection{Experiment 1: Discount factor}
+% the purpose of this experiment is to understand how the discount factor influences the result
+
+\subsubsection{Setting}
+% you describe how you perform the experiment (you also need to specify the configuration used for the experiment)
+
+\subsubsection{Observations}
+% you describe the experimental results and the conclusions you inferred from these results
+
+\subsection{Experiment 2: Comparisons with dummy agents}
+% you compare the results of your agent with two dummy agents: the random agent that was already given in the starter files and another dummy agent that you define and create. You should report the results from the simulations using the topologies given in the starter files and optionally, additional topologies that you create.
+
+\subsubsection{Setting}
+% you describe how you perform the experiment and you describe the dummy agent you created (you also need to specify the configuration used for the experiment)
+
+\subsubsection{Observations}
+% elaborate on the observed results
+
+\vdots
+
+\subsection{Experiment n}
+% other experiments you would like to present
+
+\subsubsection{Setting}
+
+\subsubsection{Observations}
+
+\end{document}
