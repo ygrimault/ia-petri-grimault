@@ -123,7 +123,7 @@ public class ReactiveAgent implements ReactiveBehavior {
 				for (int j = 0; j < totalCities; j++) {
 					City nextCity = topology.cities().get(j);
 					if (s.curCity.neighbors().contains(nextCity)) {
-						ActionReward tmpQ = new ActionReward(j,0);
+						ActionReward tmpQ = new ActionReward(j,0.0);
 
 						// Sum part of the formula (Move actions imply R(s,a) = 0)
 						for (City newTask : topology){
@@ -147,8 +147,9 @@ public class ReactiveAgent implements ReactiveBehavior {
 			}
 			test=0;
 			for (State s : allStates){
-				test+=Math.sqrt(Math.pow(new_strategy.get(s).reward-strategy.get(s).reward,2));
+				test+=Math.pow(new_strategy.get(s).reward-strategy.get(s).reward,2);
 			}
+			test = Math.sqrt(test);
 			nbIter++;
 			strategy = new_strategy;
 		}
@@ -166,7 +167,6 @@ public class ReactiveAgent implements ReactiveBehavior {
 	@Override
 	public Action act(Vehicle vehicle, Task availableTask) {
 		Action action;
-
 		ActionReward Q;
 		if (availableTask != null) {
 			Q = strategy.get(new State(vehicle.getCurrentCity(), availableTask.deliveryCity));
@@ -181,12 +181,12 @@ public class ReactiveAgent implements ReactiveBehavior {
 			// Move action
 			action = new Move(topology.cities().get(Q.action));
 		}
-		
+
 		if (numActions >= 1) {
 			System.out.println("The total profit after "+numActions+" actions is "+myAgent.getTotalProfit()+" (average profit: "+(myAgent.getTotalProfit() / (double)numActions)+")");
 		}
 		numActions++;
-		
+
 		return action;
 	}
 }
