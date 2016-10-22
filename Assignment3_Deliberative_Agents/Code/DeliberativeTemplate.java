@@ -265,8 +265,9 @@ public class DeliberativeTemplate implements DeliberativeBehavior {
                 for(Action action : substates.keySet()){
 					List<Action> actionList = new ArrayList<>();
 					nodePlan.iterator().forEachRemaining(actionList::add);
-                    Plan newPlan = new Plan(nodeState.currentCity,actionList);
-                    newPlan.append(action);
+					Plan newPlan = new Plan(nodeState.currentCity,actionList);
+					newPlan.append(action);
+					newPlan.seal();
                     Q.add(new PlanToState(newPlan, substates.get(action)));     // Create new plans from existing one and add to END of stack (BFS, not DFS)
                 }
                 Collections.sort(Q,(planToState1, planToState2) -> (int)(planToState1.plan.totalDistance() - planToState2.plan.totalDistance())); // Lambda function to compute cost ??? Store cost to avoid multiple computations ?!!
