@@ -93,7 +93,7 @@ public class DeliberativeTemplate implements DeliberativeBehavior {
 
 		@Override
 		public int hashCode(){
-			return currentCity.hashCode() + 10*availableTasks.hashCode() + 100*carriedTasks.hashCode() + 1000*deliveredTasks.hashCode();
+			return currentCity.hashCode() + 100*availableTasks.hashCode() + 10000*carriedTasks.hashCode() + 1000000*deliveredTasks.hashCode();
 		}
 
 		@Override
@@ -220,6 +220,7 @@ public class DeliberativeTemplate implements DeliberativeBehavior {
 					nodePlan.iterator().forEachRemaining(actionList::add);
 					Plan newPlan = new Plan(nodeState.currentCity,actionList);
 					newPlan.append(action);
+					newPlan.seal();
                     Q.add(new PlanToState(newPlan, substates.get(action)));     // Create new plans from existing one and add to END of stack (BFS, not DFS)
                 }
             }
