@@ -44,43 +44,49 @@ public class DeliberativeTemplate implements DeliberativeBehavior {
 		public TaskSet carriedTasks;
         public TaskSet deliveredTasks;
 
+		public int carriedWeight;
+
 		public State(City currentCity, TaskSet availableTasks, TaskSet carriedTasks, TaskSet deliveredTasks){
 			this.currentCity = currentCity;
 			this.availableTasks = availableTasks;
 			this.carriedTasks = carriedTasks;
             this.deliveredTasks = deliveredTasks;
+
+			carriedWeight = this.carriedTasks.weightSum();
 		}
 
-		public HashMap<Action, State> subStates(){	// Faire une map avec les actions ?!!
+		public HashMap<Action, State> subStates(){
 			HashMap<Action, State> substates = new HashMap<>();
 
-            for (Task task : carriedTasks){
-                if(task.deliveryCity == currentCity){
-                    TaskSet newDeliveredTasks = deliveredTasks.clone();
-                    TaskSet newCarriedTasks = carriedTasks.clone();
-                    newDeliveredTasks.add(task);
-                    newCarriedTasks.remove(task);
+			for (Task task : carriedTasks) {
+				if (task.deliveryCity == currentCity) {
+					TaskSet newDeliveredTasks = deliveredTasks.clone();
+					TaskSet newCarriedTasks = carriedTasks.clone();
+					newDeliveredTasks.add(task);
+					newCarriedTasks.remove(task);
 
-                    substates.put(new Pickup(task),
-                            new State(currentCity, availableTasks,newCarriedTasks,newDeliveredTasks));
-                }
-            }
-
-			for(Task task : availableTasks){
-				if(task.pickupCity == currentCity){
-                    TaskSet newAvailableTasks = availableTasks.clone();
-                    TaskSet newCarriedTasks = carriedTasks.clone();
-                    newAvailableTasks.remove(task);
-                    newCarriedTasks.add(task);
-
-					substates.put(new Pickup(task),
-								  new State(currentCity, newAvailableTasks,newCarriedTasks,deliveredTasks));	// Fonction auxiliaire ???
+					substates.put(new Delivery(task),
+							new State(currentCity, availableTasks, newCarriedTasks, newDeliveredTasks));
+					return substates;	// If at least one task is delivered, it has to be the optimal choice
 				}
 			}
 
-			for(City city : currentCity.neighbors()){
+			// Now we can see see if we should pickup a task or move
+			for (Task task : availableTasks) {
+				if (task.pickupCity == currentCity && carriedWeight + task.weight <= capacity) {    // Check if the task is carriable or not
+					TaskSet newAvailableTasks = availableTasks.clone();
+					TaskSet newCarriedTasks = carriedTasks.clone();
+					newAvailableTasks.remove(task);
+					newCarriedTasks.add(task);
+
+					substates.put(new Pickup(task),
+							new State(currentCity, newAvailableTasks, newCarriedTasks, deliveredTasks));
+				}
+			}
+
+			for (City city : currentCity.neighbors()) {
 				substates.put(new Move(city),
-						  	  new State(city, availableTasks, carriedTasks,deliveredTasks));
+						new State(city, availableTasks, carriedTasks, deliveredTasks));
 			}
 
 			return substates;
@@ -92,14 +98,14 @@ public class DeliberativeTemplate implements DeliberativeBehavior {
 		}
 	}
 
-	private double planCost(Plan plan,Vehicle vehicle, TaskSet deliveredTasks){
-        double distance = plan.totalDistance();
-        double tasksReward = deliveredTasks.rewardSum();
-
-        double totalReward = tasksReward - distance*vehicle.costPerKm();
-
-        return (-1.0)*totalReward;
-    }
+//	private double planCost(Plan plan,Vehicle vehicle, TaskSet deliveredTasks){
+//        double distance = plan.totalDistance();
+//        double tasksReward = deliveredTasks.rewardSum();
+//
+//        double totalReward = tasksReward - distance*vehicle.costPerKm();
+//
+//        return (-1.0)*totalReward;
+//    }
 
 	private class PlanToState{
 		public Plan plan;
@@ -131,6 +137,7 @@ public class DeliberativeTemplate implements DeliberativeBehavior {
 	public Plan plan(Vehicle vehicle, TaskSet tasks) {
 		Plan plan;
         tasks.addAll(vehicle.getCurrentTasks());
+		this.capacity = vehicle.capacity();
 
 		// Compute the plan with the selected algorithm.
 		switch (algorithm) {
@@ -173,31 +180,39 @@ public class DeliberativeTemplate implements DeliberativeBehavior {
 
 	private Plan bfsPlan(Vehicle vehicle, TaskSet tasks){
 		City current = vehicle.getCurrentCity();
+
+		// Create an empty task set with same "universe" of tasks to initialize deliveredTasks in State)
         TaskSet emptyTaskSet=tasks.clone();
         emptyTaskSet.clear();
+
+		// Create initial state
 		State curState = new State(current, tasks, vehicle.getCurrentTasks(),emptyTaskSet);
 
-		// BFS Algorithm on state tree, tree which is updated at each iteration
-		ArrayList<PlanToState> Q = new ArrayList<PlanToState>();
-		HashMap<State, Plan> C = new HashMap<>();
+		//// BFS Algorithm on state tree, tree which is updated at each iteration ////
 
-		Q.add(new PlanToState(new Plan(current), curState));
+		// We use the same notations as seen in course for Q and C
+		ArrayList<PlanToState> Q = new ArrayList<>();		// Stores the plan to go to each state in a queue
+		ArrayList<State> C = new ArrayList<>();				// Stores each visited state in order to not visit it a second time
+
+		Q.add(new PlanToState(new Plan(current), curState));	// Initialize Q with initial State and Plan
 
 		while(true){
             if(Q.isEmpty()){
                 throw new AssertionError("Should not happen.");
             }
-			PlanToState node = Q.remove(0);	// Find how to use stacks and their pop function
+			PlanToState node = Q.remove(0);	// Works like a pop() of a stack
 			Plan nodePlan = node.plan;
 			State nodeState = node.state;
-			if(nodeState.carriedTasks.isEmpty() && nodeState.availableTasks.isEmpty()){         // Compute a few results and get best one ?
-				return nodePlan;
-			}
-			if(!C.containsKey(nodeState)){
-                C.put(nodeState, nodePlan);
+			if(!C.contains(nodeState)){
+				if(nodeState.carriedTasks.isEmpty() && nodeState.availableTasks.isEmpty()){         // This means that we delivered all tasks, ie it is a final state
+					return nodePlan;		// For now, we return the first final plan met, which takes the least amount of actions (not necessarily optimal !)
+				}
+
+                C.add(nodeState);
                 HashMap<Action, State> substates = nodeState.subStates();
+
                 for(Action action : substates.keySet()){
-                    Plan newPlan = nodePlan;
+                    Plan newPlan = nodePlan;			// TODO find a way to copy a Plan object, or create a list of Actions, then the plan
                     newPlan.append(action);
                     Q.add(new PlanToState(newPlan, substates.get(action)));     // Create new plans from existing one and add to END of stack (BFS, not DFS)
                 }
@@ -206,32 +221,40 @@ public class DeliberativeTemplate implements DeliberativeBehavior {
 	}
 
 	private Plan aStarPlan(Vehicle vehicle, TaskSet tasks){
-        City current = vehicle.getCurrentCity();
-        TaskSet emptyTaskSet=tasks.clone();
-        emptyTaskSet.clear();
-        State curState = new State(current, tasks, vehicle.getCurrentTasks(),emptyTaskSet);
+		City current = vehicle.getCurrentCity();
+
+		// Create an empty task set with same "universe" of tasks to initialize deliveredTasks in State)
+		TaskSet emptyTaskSet=tasks.clone();
+		emptyTaskSet.clear();
+
+		// Create initial state
+		State curState = new State(current, tasks, vehicle.getCurrentTasks(),emptyTaskSet);
 
         // A* Algorithm on state tree, tree which is updated at each iteration
-        ArrayList<PlanToState> Q = new ArrayList<PlanToState>();
-        HashMap<State, Double> C = new HashMap<>();
 
-        Q.add(new PlanToState(new Plan(current), curState));
+		// We use the same notations as seen in course for Q and C
+		ArrayList<PlanToState> Q = new ArrayList<PlanToState>();		// Stores the plan to go to each state in a queue
+        HashMap<State, Double> C = new HashMap<>();			// Stores each visited state and the current cost of its assigned plan
+
+        Q.add(new PlanToState(new Plan(current), curState));	// Initialize Q with initial State and Plan
 
         while(true){
             if(Q.isEmpty()){
                 throw new AssertionError("Should not happen.");
             }
-            PlanToState node = Q.remove(0);	// Find how to use stacks and their pop function
+            PlanToState node = Q.remove(0);	// Works like a pop() of a stack
             Plan nodePlan = node.plan;
             State nodeState = node.state;
-            double nodeCost = planCost(nodePlan, vehicle,nodeState.deliveredTasks);
+            double nodeCost = nodePlan.totalDistance();
 
-            if(nodeState.carriedTasks.isEmpty() && nodeState.availableTasks.isEmpty()){
-                return nodePlan;
-            }
-            if(!C.containsKey(nodeState) || C.get(nodeState) > nodeCost){
+			if(!C.containsKey(nodeState) || C.get(nodeState) > nodeCost){
+            	if(nodeState.carriedTasks.isEmpty() && nodeState.availableTasks.isEmpty()){
+                	return nodePlan;		// We know that this plan is optimal, as it has the lowest total distance, and the total reward is the same
+            	}
+
                 C.put(nodeState, nodeCost);
                 HashMap<Action, State> substates = nodeState.subStates();
+				
                 for(Action action : substates.keySet()){
                     Plan newPlan = nodePlan;
                     newPlan.append(action);
