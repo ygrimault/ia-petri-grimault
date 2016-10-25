@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 \documentclass[11pt]{article}
 
 \usepackage{amsmath}
@@ -64,4 +65,79 @@ BFS takes 15 seconds to compute a plan for 7 tasks and 1min 50 for 8 tasks.
 \subsubsection{Observations}
 % Describe the experimental results and the conclusions you inferred from these results %
 
+=======
+\documentclass[11pt]{article}
+
+\usepackage{amsmath}
+\usepackage{textcomp}
+
+% Add other packages here %
+
+
+% Put your group number and names in the author field %
+\title{\bf Excercise 3\\ Implementing a deliberative Agent}
+\author{Group \textnumero : Student 1, Student 2}
+
+
+% N.B.: The report should not be longer than 3 pages %
+
+
+\begin{document}
+\maketitle
+
+\section{Model Description}
+
+\subsection{Intermediate States}
+% Describe the state representation %
+Our States describe the current city the vehicle is in, and 2 TaskSets, respectively for available and carried tasks (we initially had a third TaskSet that was supposed to be used for the heuristic function, but we found another function that didn't use it, so we dropped it).
+
+In our class State, we also implemented a method that returns a list of substates of this state. To compute them, we first compute the set of unique state where we delivered a carried task at the current city, as it has no cost and should always be done immediately. Then we compute all states where we moved to another city, or picked up a task available in this city as long as its weight doesn't exceed the maximum capacity of the vehicle.
+
+\subsection{Goal State}
+% Describe the goal state %
+A State is a goal if and only if there are no more available tasks, and none are being carried. Thus, it needs to have availableTasks.isEmpty() and carriedTasks.isEmpty().
+
+\subsection{Actions}
+% Describe the possible actions/transitions in your model %
+The different actions are move to another City (update currentCity), pickup a task (move it from availableTasks to carriedTasks), and deliver a task (remove it from carriedTasks).
+
+
+\section{Implementation}
+
+\subsection{BFS}
+% Details of the BFS implementation %
+The BFS algorithm is implemented as described in the course, with the remark that we pick the first final goal we meet, ie the one with the least amount of Actions. We could have stored several final Plans and compare them to get the best one, but we deemed it not necessary. Other remarks can be found as commentaries in the code.
+
+\subsection{A*}
+% Details of the A* implementation %
+For the A* algorithm, we also took it from the course, and works very similarly to the BFS algorithm, with the exception of the heuristic function.
+
+\subsection{Heuristic Function}
+% Details of the heuristic functions: main idea, optimality, admissibility %
+Because the final state describes a state where all tasks are delivered, the cost of the plan is entirely defined by the distance travelled. Moreover, if we get 2 plans to get to the same state, the difference between the 2 plans is once again defined by the distance travelled. That's why we picked this function as our heuristic function, without taking into account the total reward of the tasks already delivered.
+
+
+\section{Results}
+
+\subsection{Experiment 1: BFS and A* Comparison}
+% Compare the two algorithms in terms of: optimality, efficiency, limitations %
+% Report the number of tasks for which you can build a plan in less than one minute %
+
+\subsubsection{Setting}
+% Describe the settings of your experiment: topology, task configuration, etc. %
+
+\subsubsection{Observations}
+% Describe the experimental results and the conclusions you inferred from these results %
+
+
+\subsection{Experiment 2: Multi-agent Experiments}
+% Observations in multi-agent experiments %
+
+\subsubsection{Setting}
+% Describe the settings of your experiment: topology, task configuration, etc. %
+
+\subsubsection{Observations}
+% Describe the experimental results and the conclusions you inferred from these results %
+
+>>>>>>> a7c49611d569fd24ca4f81201e7033009e3e7489
 \end{document}
