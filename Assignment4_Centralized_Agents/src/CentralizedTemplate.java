@@ -311,6 +311,9 @@ public class CentralizedTemplate implements CentralizedBehavior {
         return plan;
     }
 
+	/*
+	Creates a deep copy of our plan
+	*/
     private List<List<CustomAction>> copyPlan(List<List<CustomAction>> plans){
         List<List<CustomAction>> copyPlans = new ArrayList<>();
         for (int i = 0; i < plans.size(); i++) {
