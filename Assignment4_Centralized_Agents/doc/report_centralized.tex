@@ -1,0 +1,92 @@
+\documentclass[11pt]{article}
+
+\usepackage{amsmath}
+\usepackage{textcomp}
+
+% Add other packages here %
+
+
+% Put your group number and names in the author field %
+\title{\bf Excercise 4\\ Implementing a centralized agent}
+\author{Group \textnumero 3 : Vincent Petri, Yannick Grimault}
+
+
+% N.B.: The report should not be longer than 3 pages %
+
+
+\begin{document}
+\maketitle
+
+\section{Solution Representation}
+
+\subsection{Variables}
+% Describe the variables used in your solution representation %
+In our implementation, we created a class \textsc{CustomAction} which is a tuple of a task with an action on this task (pickUp or not pickUp, represented by a boolean). Note that we once again had to implement \textsc{hashcode} and \textsc{equals} to compare 2 similar actions.
+
+This class allowed us to work not on a list of PickUp, Move and Deliver Actions, but on a smaller set of actions where we could access the corresponding task (we can't access the task of a \textsc{logist.Action}).
+
+\vspace{5mm}
+
+In our algorithm, we had to replace the list of plans by a list of list of our custom actions, so it became problematic when we wanted to keep a copy of the currently optimal planification. That's why we had to create the function \textsc{copyPlan} which makes a deep copy or our planification.
+
+Obviously, we also had to implement a function \textsc{listToPlan} that transforms a list of \textsc{CustomAction} into the corresponding Plan by adding the Move actions too.
+
+\vspace{5mm}
+
+Note that we also implemented the functions \textsc{nextAction} (2 implementations whether we provide a vehicle or an action as an argument), \textsc{time}, and \textsc{vehicle}, as described in the assignment description.
+
+\subsection{Constraints}
+% Describe the constraints in your solution representation %
+Our constraints are the following, and are tested in our function \textsc{isPermutable}:
+
+\begin{itemize}
+\item A task has to be picked up before being delivered
+\item A task can't be picked up if its weight added to the total weight of the tasks carried by the vehicle surpasses the capacity of the said vehicle
+\end{itemize}
+
+\subsection{Objective function}
+% Describe the function that you optimize %
+The function that we want to optimize is implemented in \textsc{totalCost}. It simply computes the total distance travelled by all the vehicles, multiplied by their respective cost. Note that we went for an economic solution, so it might not be the fastest one.
+
+
+\section{Stochastic optimization}
+
+\subsection{Initial solution}
+% Describe how you generate the initial solution %
+Our initial solution simply consists in the translation or the naive plan in our variable system: the first vehicle picks up and delivers each task one by one.
+
+\subsection{Generating neighbours}
+% Describe how you generate neighbors %
+To generate neighbours, we choose a task at random, then whether we look at its pickup or its delivery. Then we choose at random whether we want to entrust this task to another vehicle or permute it (when possible) with its successor (this verification being done by \textsc{isPermutable}.
+
+If we chose to entrust the task to another vehicle, we need to move both pickup and delivery actions at the end of the stack of actions of the said vehicle.
+
+\subsection{Stochastic optimization algorithm}
+% Describe your stochastic optimization algorithm %
+For our stochastic exploration, we repeat a certain number of times \textsc{update} which ``moves'' to a random neighbour. We then compute the cost of this neighbour, and if it's less than the cost of the previous optimal solutions, we store a copy of it. At the end of the loop, we simply use the optimal plan stored and compute the corresponding list of plans in terms of \textsc{logist.Action}.
+
+
+\section{Results}
+
+\subsection{Experiment 1: Model parameters}
+% if your model has parameters, perform an experiment and analyze the results for different parameter values %
+
+\subsubsection{Setting}
+% Describe the settings of your experiment: topology, task configuration, number of tasks, number of vehicles, etc. %
+% and the parameters you are analyzing %
+
+\subsubsection{Observations}
+% Describe the experimental results and the conclusions you inferred from these results %
+
+\subsection{Experiment 2: Different configurations}
+% Run simulations for different configurations of the environment (i.e. different tasks and number of vehicles) %
+
+\subsubsection{Setting}
+% Describe the settings of your experiment: topology, task configuration, number of tasks, number of vehicles, etc. %
+
+\subsubsection{Observations}
+% Describe the experimental results and the conclusions you inferred from these results %
+% Reflect on the fairness of the optimal plans. Observe that optimality requires some vehicles to do more work than others. %
+% How does the complexity of your algorithm depend on the number of vehicles and various sizes of the task set? %
+
+\end{document}

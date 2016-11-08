@@ -94,6 +94,7 @@ public class CentralizedTemplate implements CentralizedBehavior {
     @Override
     public List<Plan> plan(List<Vehicle> vehicles, TaskSet tasks) {
         long time_start = System.currentTimeMillis();
+        long time_step;
         
 //		System.out.println("Agent " + agent.id() + " has tasks " + tasks);
 
@@ -107,10 +108,19 @@ public class CentralizedTemplate implements CentralizedBehavior {
 
         // Copy the plan to keep track of the best one over all iterations
         List<List<CustomAction>> optimalPlan = copyPlan(initialPlans);
+
+        // Main loop
         for (int i = 0; i < MAX_ITER; i++) {
             update(initialPlans,vehicles,tasks);
             if (totalCost(initialPlans,vehicles) < totalCost(optimalPlan,vehicles)){
                 optimalPlan = copyPlan(initialPlans);
+            }
+
+            // If we're too close to the end, we need to stop.
+            // We also need to be aware of the time necessary to compute the "real" plan.
+            time_step = System.currentTimeMillis();
+            if(time_step - time_start > timeout_plan - 50){
+                break;
             }
         }
 
@@ -311,9 +321,6 @@ public class CentralizedTemplate implements CentralizedBehavior {
         return plan;
     }
 
-	/*
-	Creates a deep copy of our plan
-	*/
     private List<List<CustomAction>> copyPlan(List<List<CustomAction>> plans){
         List<List<CustomAction>> copyPlans = new ArrayList<>();
         for (int i = 0; i < plans.size(); i++) {
