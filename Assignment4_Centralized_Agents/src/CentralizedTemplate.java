@@ -38,7 +38,8 @@ public class CentralizedTemplate implements CentralizedBehavior {
     private long timeout_setup;
     private long timeout_plan;
     private Random random;
-    private static final int MAX_ITER = 300000;
+    private static final int MAX_ITER = 1000000;
+    private static final double PROBA_PERMUTE = 0.95;
 
     /*
     Class to simulate an action, ie drop or pickup a task
@@ -108,12 +109,18 @@ public class CentralizedTemplate implements CentralizedBehavior {
 
         // Copy the plan to keep track of the best one over all iterations
         List<List<CustomAction>> optimalPlan = copyPlan(initialPlans);
-
+        int nbIterWithNoChange = 0;
         // Main loop
         for (int i = 0; i < MAX_ITER; i++) {
+            if (nbIterWithNoChange < 1000) {
+                initialPlans = copyPlan(optimalPlan);
+            }
             update(initialPlans,vehicles,tasks);
-            if (totalCost(initialPlans,vehicles) < totalCost(optimalPlan,vehicles)){
+            if (totalCost(initialPlans, vehicles) < totalCost(optimalPlan, vehicles)) {
                 optimalPlan = copyPlan(initialPlans);
+                nbIterWithNoChange = 0;
+            } else {
+                nbIterWithNoChange += 1;
             }
 
             // If we're too close to the end, we need to stop.
@@ -135,7 +142,8 @@ public class CentralizedTemplate implements CentralizedBehavior {
         long time_end = System.currentTimeMillis();
         long duration = time_end - time_start;
         System.out.println("The plan was generated in "+duration+" milliseconds.");
-        
+        System.out.println(totalCost(optimalPlan,vehicles));
+
         return plans;
     }
 
@@ -274,7 +282,7 @@ public class CentralizedTemplate implements CentralizedBehavior {
         Vehicle currentVehicle = vehicle(plan,chosenAction,vehicles);
         int vehicleId = vehicles.indexOf(currentVehicle);
 
-        if (random.nextBoolean() || !isPermutable(plan, chosenAction, currentVehicle, vehicleId)){
+        if (Math.random()>PROBA_PERMUTE || !isPermutable(plan, chosenAction, currentVehicle, vehicleId)){
             //We choose to change vehicle
 
             CustomAction complementaryAction = new CustomAction(!chosenAction.isPickUp,chosenTask);

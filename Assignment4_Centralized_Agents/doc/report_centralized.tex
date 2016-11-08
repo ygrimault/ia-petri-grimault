@@ -5,7 +5,6 @@
 
 % Add other packages here %
 
-
 % Put your group number and names in the author field %
 \title{\bf Excercise 4\\ Implementing a centralized agent}
 \author{Group \textnumero 3 : Vincent Petri, Yannick Grimault}
@@ -27,7 +26,7 @@ This class allowed us to work not on a list of PickUp, Move and Deliver Actions,
 
 \vspace{5mm}
 
-In our algorithm, we had to replace the list of plans by a list of list of our custom actions, so it became problematic when we wanted to keep a copy of the currently optimal planification. That's why we had to create the function \textsc{copyPlan} which makes a deep copy or our planification.
+In our algorithm, we had to replace the list of plans by a list of list of our custom actions, so it became problematic when we wanted to keep a copy of the currently optimal planification. That's why we had to create the function \textsc{copyPlan} which makes a deep copy of our planification.
 
 Obviously, we also had to implement a function \textsc{listToPlan} that transforms a list of \textsc{CustomAction} into the corresponding Plan by adding the Move actions too.
 
@@ -57,13 +56,13 @@ Our initial solution simply consists in the translation or the naive plan in our
 
 \subsection{Generating neighbours}
 % Describe how you generate neighbors %
-To generate neighbours, we choose a task at random, then whether we look at its pickup or its delivery. Then we choose at random whether we want to entrust this task to another vehicle or permute it (when possible) with its successor (this verification being done by \textsc{isPermutable}.
+To generate neighbours, we choose a task at random, then whether we look at its pickup or its delivery. Then we choose at random whether we want to entrust this task to another vehicle or permute it (when possible) with its successor (this verification being done by \textsc{isPermutable}. 
 
 If we chose to entrust the task to another vehicle, we need to move both pickup and delivery actions at the end of the stack of actions of the said vehicle.
 
 \subsection{Stochastic optimization algorithm}
 % Describe your stochastic optimization algorithm %
-For our stochastic exploration, we repeat a certain number of times \textsc{update} which ``moves'' to a random neighbour. We then compute the cost of this neighbour, and if it's less than the cost of the previous optimal solutions, we store a copy of it. At the end of the loop, we simply use the optimal plan stored and compute the corresponding list of plans in terms of \textsc{logist.Action}.
+For our stochastic exploration, we repeat a certain number of times \textsc{update} which ``moves'' to a random neighbour. We then compute the cost of this neighbour, and if it's less than the cost of the previous optimal solutions, we store a copy of it. If the optimal plan has changed recently (in the last 1000 iterations), we try to modify a copy of the optimal plan. If it hasn't changed recently we might be in a local minimum, so we keep the random modifications for each iteration. At the end of the loop, we simply use the optimal plan stored and compute the corresponding list of plans in terms of \textsc{logist.Action}. 
 
 
 \section{Results}
@@ -74,19 +73,36 @@ For our stochastic exploration, we repeat a certain number of times \textsc{upda
 \subsubsection{Setting}
 % Describe the settings of your experiment: topology, task configuration, number of tasks, number of vehicles, etc. %
 % and the parameters you are analyzing %
+To test the different model parameters we'll use a base configuration. This will be in the English topology, with 30 tasks and 4 vehicles
+
+We will try different value for the two parameters $MAX\_ITER$ which is the number of iteration our programm will do and $PROBA\_PERMUTE$ which is the probability that we try to permute the task we picked 
 
 \subsubsection{Observations}
 % Describe the experimental results and the conclusions you inferred from these results %
+With $MAX\_ITER = 300000$ and $PROBA\_PERMUTE = 0.5$ the computed cost tends to be around 50000. When we reduce the probability to permute, the cost rises. The same happens when we try to reduce the number of iteration. The minimal cost seems to be achieved with $PROBA\_PERMUTE = 0.95$. The effect of $MAX\_ITER$ becomes marginal after $1000000$.
 
 \subsection{Experiment 2: Different configurations}
 % Run simulations for different configurations of the environment (i.e. different tasks and number of vehicles) %
 
 \subsubsection{Setting}
 % Describe the settings of your experiment: topology, task configuration, number of tasks, number of vehicles, etc. %
+In this section we try different number of tasks and vehicles for the company and see the impact on the cost. We'll test solutions for numbers of tasks 20 or 40 and vehicles 2-4. We choose to run 1000000 iterations with $PROBA\_PERMUTE = 0.95$
 
 \subsubsection{Observations}
 % Describe the experimental results and the conclusions you inferred from these results %
 % Reflect on the fairness of the optimal plans. Observe that optimality requires some vehicles to do more work than others. %
 % How does the complexity of your algorithm depend on the number of vehicles and various sizes of the task set? %
+These result show that with more vehicles we can reduce the costs to deliver all tasks.
 
+\begin{tabular}{ |c|c|c| } 
+ \hline
+ Tasks & Vehicles & Cost \\ 
+ \hline
+ 20 & 2 & 28000 \\ 
+ 20 & 3 & 27000 \\ 
+ 20 & 4 & 24000 \\ 
+ 40 & 2 & 75000 \\ 
+ 40 & 4 & 70000 \\ 
+ \hline
+\end{tabular}
 \end{document}
