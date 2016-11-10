@@ -38,8 +38,8 @@ public class CentralizedTemplate implements CentralizedBehavior {
     private long timeout_setup;
     private long timeout_plan;
     private Random random;
-    private static final int MAX_ITER = 1000000;
-    private static final double PROBA_PERMUTE = 0.95;
+    private static final int MAX_ITER = 20000;
+    private static final double PROBA_PERMUTE = 0.85;
 
     /*
     Class to simulate an action, ie drop or pickup a task
@@ -98,29 +98,44 @@ public class CentralizedTemplate implements CentralizedBehavior {
         long time_step;
         
 //		System.out.println("Agent " + agent.id() + " has tasks " + tasks);
-
+/*
         // Initialize The list of "Plans" with all tasks delivered successively by the first agent alone
         List<CustomAction> initialPlanVehicle1 = naivePlan(vehicles.get(0), tasks);
-        List<List<CustomAction>> initialPlans = new ArrayList<>();
-        initialPlans.add(initialPlanVehicle1);
-        while (initialPlans.size() < vehicles.size()) {
-            initialPlans.add(new ArrayList<>());
-        }
+        List<List<CustomAction>> nodePlans = new ArrayList<>();
+        nodePlans.add(initialPlanVehicle1);
+        while (nodePlans.size() < vehicles.size()) {
+            nodePlans.add(new ArrayList<>());
+        }*/
+
+        List<List<CustomAction>> nodePlans = naivePlan(tasks, vehicles);
 
         // Copy the plan to keep track of the best one over all iterations
-        List<List<CustomAction>> optimalPlan = copyPlan(initialPlans);
+        List<List<CustomAction>> optimalPlan = copyPlan(nodePlans);
+        List<List<CustomAction>> tmpPlan = copyPlan(nodePlans);
+        List<List<CustomAction>> neighPlan = copyPlan(nodePlans);
         int nbIterWithNoChange = 0;
         // Main loop
         for (int i = 0; i < MAX_ITER; i++) {
-            if (nbIterWithNoChange < 1000) {
-                initialPlans = copyPlan(optimalPlan);
+//            if (nbIterWithNoChange < 1000) {
+//                nodePlans = copyPlan(optimalPlan);
+//            }
+
+            // Local exploration to find the "best" neighbour
+            for (int j = 0; j < 50; j++) {
+                neighPlan = copyPlan(nodePlans);
+                update2(neighPlan, vehicles, tasks);
+                if(totalCost(neighPlan, vehicles) < totalCost(tmpPlan, vehicles)){
+                    tmpPlan = copyPlan(neighPlan);
+                }
             }
-            update(initialPlans,vehicles,tasks);
-            if (totalCost(initialPlans, vehicles) < totalCost(optimalPlan, vehicles)) {
-                optimalPlan = copyPlan(initialPlans);
-                nbIterWithNoChange = 0;
-            } else {
-                nbIterWithNoChange += 1;
+            nodePlans = copyPlan(tmpPlan);
+            //update(nodePlans, vehicles, tasks);
+
+            if (totalCost(nodePlans, vehicles) < totalCost(optimalPlan, vehicles)) {
+                optimalPlan = copyPlan(nodePlans);
+//                nbIterWithNoChange = 0;
+//            } else {
+//                nbIterWithNoChange += 1;
             }
 
             // If we're too close to the end, we need to stop.
@@ -315,16 +330,100 @@ public class CentralizedTemplate implements CentralizedBehavior {
         }
     }
 
+    private void update2(List<List<CustomAction>> plan, List<Vehicle> vehicles, TaskSet tasks){
+        List<Task> tasksList = new ArrayList<>(tasks);
+        Task chosenTask = tasksList.get(random.nextInt(tasks.size()));
+        CustomAction pickupAction = new CustomAction(true, chosenTask);
+        CustomAction deliveryAction = new CustomAction(false, chosenTask);
+        Vehicle currentVehicle = vehicle(plan,pickupAction,vehicles);
+
+        int vehicleId = vehicles.indexOf(currentVehicle);
+        plan.get(vehicleId).remove(pickupAction);
+        plan.get(vehicleId).remove(deliveryAction);
+
+        int newVehicleId = random.nextInt(vehicles.size());
+        Vehicle newVehicle = vehicles.get(newVehicleId);
+        List<CustomAction> vehiclePlan = plan.get(newVehicleId);
+
+        int cumulWeight = 0;
+        int id = 0;
+
+        int newPickupId = random.nextInt(vehiclePlan.size() + 1);
+        boolean pickupTaskPlaced = false;
+
+        while(!pickupTaskPlaced){
+            if(id == vehiclePlan.size()){
+                vehiclePlan.add(id, pickupAction);
+                break;
+            }
+
+            if(id < newPickupId) {
+                CustomAction currentAction = vehiclePlan.get(id);
+                if (currentAction.isPickUp) {
+                    cumulWeight += currentAction.task.weight;
+                } else {
+                    cumulWeight -= currentAction.task.weight;
+                }
+                id += 1;
+            }
+
+            if(id == newPickupId){
+                if (cumulWeight + pickupAction.task.weight < newVehicle.capacity()){
+                    vehiclePlan.add(id, pickupAction);
+                    pickupTaskPlaced = true;
+                } else {
+                    newPickupId += 1;
+                }
+            }
+        }
+
+        int newDeliveryId = newPickupId + random.nextInt(vehiclePlan.size() - newPickupId) + 1;
+        boolean deliveryTaskPlaced = false;
+        id = newPickupId;
+        while(!deliveryTaskPlaced){
+            if(id == vehiclePlan.size()){
+                vehiclePlan.add(id, pickupAction);
+                break;
+            }
+
+            if(id < newDeliveryId){
+                CustomAction currentAction = vehiclePlan.get(id);
+                if (currentAction.isPickUp) {
+                    int weight = currentAction.task.weight;
+                    if(cumulWeight + weight > newVehicle.capacity()){
+                        vehiclePlan.add(deliveryAction);
+                        deliveryTaskPlaced = true;
+                    } else {
+                        cumulWeight += weight;
+                    }
+                } else {
+                    cumulWeight -= currentAction.task.weight;
+                }
+                id += 1;
+            }
+
+            if(id == newDeliveryId){
+                vehiclePlan.add(deliveryAction);
+                deliveryTaskPlaced = true;
+            }
+        }
+    }
+
     /*
     Computes the initial list of action where the first vehicle takes one task at a time and delivers them all
      */
-    private List<CustomAction> naivePlan(Vehicle vehicle, TaskSet tasks) {
-        City current = vehicle.getCurrentCity();
-        List<CustomAction> plan = new ArrayList<>();
+    private List<List<CustomAction>> naivePlan(TaskSet tasks, List<Vehicle> vehicles) {
+        List<List<CustomAction>> plan = new ArrayList<>();
 
+        for(Vehicle v : vehicles){
+            plan.add(new ArrayList<>());
+        }
+
+        int i;
         for (Task task : tasks) {
-            plan.add(new CustomAction(true,task));
-            plan.add(new CustomAction(false,task));
+            i = random.nextInt(4);
+            plan.get(i).add(new CustomAction(true,task));
+            plan.get(i).add(new CustomAction(false,task));
         }
         return plan;
     }
