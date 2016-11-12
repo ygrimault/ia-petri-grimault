@@ -118,7 +118,6 @@ public class Util {
      */
     public double totalCost(List<List<CustomAction>> plan, List<Vehicle> vehicles){
         double cost = 0.0;
-        long distance = 0L;
 
         for (int i = 0; i < vehicles.size(); i++) {
             int costPerKm = vehicles.get(i).costPerKm();
@@ -133,10 +132,9 @@ public class Util {
                     nextCity = action.task.deliveryCity;
                 }
 
-                distance += previousCity.distanceTo(nextCity);
+                cost += previousCity.distanceTo(nextCity) * costPerKm;
                 previousCity = nextCity;
             }
-            cost+= Measures.kmToUnits(distance)*costPerKm;
         }
         return cost;
     }
