@@ -17,11 +17,13 @@ public class Util {
     private static final int MAX_ITER = 100000;
     private static final int MAX_NEIGHS = 100;
     private Random random;
-    private long timeout_plan;
+    private long timeout_bid;
+    private List<Vehicle> vehicles;
 
-    public Util(long timeout_plan){
+    public Util(long timeout_bid, List<Vehicle> vehicles){
         this.random = new Random();
-        this.timeout_plan = timeout_plan;
+        this.timeout_bid = timeout_bid;
+        this.vehicles = vehicles;
     }
 
     public class CustomAction{
@@ -49,39 +51,41 @@ public class Util {
         }
     }
 
-    public List<List<CustomAction>> ComputePlan(List<Vehicle> vehicles, List<Task> tasks) {
+    public List<List<CustomAction>> ComputePlan(List<List<CustomAction>> currentPlan, Task newTask, List<Task> tasks) {
         long time_start = System.currentTimeMillis();
         long time_step;
 
-        List<List<CustomAction>> nodePlans = naivePlan(tasks, vehicles);
+        // Add the new task at a random position to start our algorithm
+        List<List<CustomAction>> nodePlan = copyPlan(currentPlan);
+        addTaskToPlan(nodePlan, newTask);
 
         // Copy the plan to keep track of the best one over all iterations
-        List<List<CustomAction>> optimalPlan = copyPlan(nodePlans);
-        List<List<CustomAction>> tmpPlan = copyPlan(nodePlans);
+        List<List<CustomAction>> optimalPlan = copyPlan(nodePlan);
+        List<List<CustomAction>> tmpPlan = copyPlan(nodePlan);
         List<List<CustomAction>> neighPlan;
 
         int nbIterWithNoChange = 0;
         // Main loop
-        for (int i = 0; i < MAX_ITER; i++) {
+        for (int i = 0; i < MAX_ITER; i++) {    // TODO replace by !tasks.size ? (number of permutations regarding ONLY pickup) *const ? (10)
             if (nbIterWithNoChange < 100) {
-                nodePlans = copyPlan(optimalPlan);
+                nodePlan = copyPlan(optimalPlan);
             }
 
             // Local exploration to find the "best" neighbour
-            for (int j = 0; j < MAX_NEIGHS; j++) {
-                neighPlan = copyPlan(nodePlans);
-                update(neighPlan, vehicles, tasks);
-                if(totalCost(neighPlan, vehicles) < totalCost(tmpPlan, vehicles)){
+            for (int j = 0; j < MAX_NEIGHS; j++) {      // TODO replace by (tasks.size)^2 ? (number of neighbors regarding ONLY pickup) *const ? (10)
+                neighPlan = copyPlan(nodePlan);
+                update(neighPlan, tasks);
+                if(totalCost(neighPlan) < totalCost(tmpPlan)){
                     tmpPlan = copyPlan(neighPlan);
                 }
             }
 
             // Move to the best one, even if it doesn't improve
-            nodePlans = copyPlan(tmpPlan);
+            nodePlan = copyPlan(tmpPlan);
 
             // We stay at the optimal plan to explore its neighborhood and minimize it
-            if (totalCost(nodePlans, vehicles) < totalCost(optimalPlan, vehicles)) {
-                optimalPlan = copyPlan(nodePlans);
+            if (totalCost(nodePlan) < totalCost(optimalPlan)) {
+                optimalPlan = copyPlan(nodePlan);
                 nbIterWithNoChange = 0;
             } else {
                 nbIterWithNoChange += 1;
@@ -90,7 +94,7 @@ public class Util {
             // If we're too close to the end, we need to stop.
             // We also need to be aware of the time necessary to compute the "real" plan.
             time_step = System.currentTimeMillis();
-            if(time_step - time_start > timeout_plan - 50){
+            if(time_step - time_start > timeout_bid - 50){
                 break;
             }
         }
@@ -102,7 +106,7 @@ public class Util {
     Implementation of the vehicle function seen in course
     Returns the vehicle that performs the action passed as argument
      */
-    private Vehicle vehicle(List<List<CustomAction>> plan, CustomAction action, List<Vehicle> vehicles){
+    private Vehicle vehicle(List<List<CustomAction>> plan, CustomAction action){
         int vehicleId = -1;     // This should never be returned, except if the action doesn't exist
         for (int i = 0; i < plan.size(); i++) {
             if (plan.get(i).indexOf(action)!=-1){
@@ -116,7 +120,7 @@ public class Util {
     /*
     Computes the cost of a plan
      */
-    public double totalCost(List<List<CustomAction>> plan, List<Vehicle> vehicles){
+    public double totalCost(List<List<CustomAction>> plan){
         double cost = 0.0;
 
         for (int i = 0; i < vehicles.size(); i++) {
@@ -140,10 +144,9 @@ public class Util {
     }
 
     /*
-    Alternate implementation of the update function.
-    Now, it moves a random task to a random vehicle at a random position (always with respect to the constraints)
+    Remove a random task in the given plan, then call addTaskToPlan to put it at a random position
      */
-    private void update(List<List<CustomAction>> plan, List<Vehicle> vehicles, List<Task> tasks){
+    private void update(List<List<CustomAction>> plan, List<Task> tasks){
         List<Task> tasksList = new ArrayList<>(tasks);
 
         // Get a random task, and compute both its pickup action and its delivery action
@@ -152,15 +155,34 @@ public class Util {
         CustomAction deliveryAction = new CustomAction(false, chosenTask);
 
         // Remove both actions from current vehicle
-        Vehicle currentVehicle = vehicle(plan,pickupAction,vehicles);
+        Vehicle currentVehicle = vehicle(plan, pickupAction);
         int vehicleId = vehicles.indexOf(currentVehicle);
         plan.get(vehicleId).remove(pickupAction);
         plan.get(vehicleId).remove(deliveryAction);
 
-        // Get a new vehicle for insertion
-        int newVehicleId = random.nextInt(vehicles.size());
-        Vehicle newVehicle = vehicles.get(newVehicleId);
-        List<CustomAction> vehiclePlan = plan.get(newVehicleId);
+        addTaskToPlan(plan, chosenTask);
+    }
+
+    /*
+    Add a task to the current plan, at a random position in a random vehicle that can carry it.
+     */
+    private void addTaskToPlan(List<List<CustomAction>> plan, Task task){
+        CustomAction pickupAction = new CustomAction(true, task);
+        CustomAction deliveryAction = new CustomAction(false, task);
+
+        // Get a new vehicle that is able to carry the task
+        int taskWeight = task.weight;
+
+        // TODO : Use a lambda function to compute it ??
+        List<Vehicle> eligibleVehicles = new ArrayList<>();
+        for(Vehicle vehicle : vehicles){
+            if(vehicle.capacity() > taskWeight){
+                eligibleVehicles.add(vehicle);
+            }
+        }
+        int newVehicleId = random.nextInt(eligibleVehicles.size());
+        Vehicle newVehicle = eligibleVehicles.get(newVehicleId);
+        List<CustomAction> vehiclePlan = plan.get(vehicles.indexOf(newVehicle));
 
         // We'll need to explore the plan of the vehicle from start to the chosen position to check the capacity
         int cumulWeight = 0;
@@ -240,7 +262,7 @@ public class Util {
     /*
     Computes the initial plan where the vehicles take the tasks at random and carry them one at a time.
      */
-    private List<List<CustomAction>> naivePlan(List<Task> tasks, List<Vehicle> vehicles) {
+    private List<List<CustomAction>> naivePlan(List<Task> tasks) {
         List<List<CustomAction>> plan = new ArrayList<>();
 
         for(Vehicle v : vehicles){

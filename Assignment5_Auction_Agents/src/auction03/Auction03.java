@@ -38,8 +38,9 @@ public class Auction03 implements AuctionBehavior {
     private List<Task> wonTasks;
     private long timeout_plan;
     private long timeout_setup;
+    private long timeout_bid;
     private Util util;
-    private int minCapacity = Integer.MAX_VALUE;
+    private int maxCapacity = Integer.MIN_VALUE;
 
     @Override
     public void setup(Topology topology, TaskDistribution distribution,
@@ -58,24 +59,29 @@ public class Auction03 implements AuctionBehavior {
         timeout_setup = ls.get(LogistSettings.TimeoutKey.SETUP);
         // the plan method cannot execute more than timeout_plan milliseconds
         timeout_plan = ls.get(LogistSettings.TimeoutKey.PLAN);
+        // the askPrice method cannot execute more than timeout_plan milliseconds
+        timeout_bid = ls.get(LogistSettings.TimeoutKey.BID);
 
         this.topology = topology;
         this.distribution = distribution;
         this.agent = agent;
-        this.util = new Util(timeout_plan);
+        this.util = new Util(timeout_bid, agent.vehicles());
         this.wonTasks = new ArrayList<>();
         this.bidPlan = new ArrayList<>();
         this.currentPlan = new ArrayList<>();
+
+        // Initialize plans
         for (int i = 0; i < agent.vehicles().size(); i++) {
             this.bidPlan.add(new ArrayList<>());
             this.currentPlan.add(new ArrayList<>());
         }
-        for (Vehicle vehicle : agent.vehicles()) {
-            if (vehicle.capacity() < this.minCapacity) {
-                this.minCapacity = vehicle.capacity();
+
+        // Compute the max capacity of our vehicles
+        for (Vehicle vehicle : agent.vehicles()){
+            if (vehicle.capacity() > this.maxCapacity) {
+                this.maxCapacity = vehicle.capacity();
             }
         }
-
 
     }
 
@@ -83,6 +89,9 @@ public class Auction03 implements AuctionBehavior {
     public void auctionResult(Task previous, int winner, Long[] bids) {
         if (winner == agent.id()) {
             currentPlan = util.copyPlan(bidPlan);
+            wonTasks.add(previous);
+
+            // Make sure the current plan has the task as provided.
             for (List<CustomAction> vehiclePlan : currentPlan) {
                 for (CustomAction action : vehiclePlan) {
                     if (action.task.id == previous.id) {
@@ -90,23 +99,22 @@ public class Auction03 implements AuctionBehavior {
                     }
                 }
             }
-            wonTasks.add(previous);
         }
     }
 
     @Override
     public Long askPrice(Task task) {
+        // If none of our vehicles can handle the task, no need to bid for it
+        if (task.weight > maxCapacity) {
+            return null;
+        }
         // compute Plan with added task
         // get marginal cost of plan
         // return bid depending on marginal cost
-        if (task.weight > minCapacity) {
-            return null;
-        }
-
         wonTasks.add(task);
-        bidPlan = util.ComputePlan(agent.vehicles(),wonTasks);
+        bidPlan = util.ComputePlan(currentPlan, task,wonTasks);
 
-        double marginalCost = util.totalCost(bidPlan,agent.vehicles()) - util.totalCost(currentPlan,agent.vehicles());
+        double marginalCost = util.totalCost(bidPlan) - util.totalCost(currentPlan);
 
         //Adapter le bid pour qu'il soit supérieur au marginalcost pour faire du bénef
         double bid = marginalCost;
@@ -116,9 +124,9 @@ public class Auction03 implements AuctionBehavior {
         return (long) Math.round(bid);
     }
 
+    // TODO : modifier en fonction de la version de Vincent
     @Override
     public List<Plan> plan(List<Vehicle> vehicles, TaskSet tasks) {
-        //Trouver comment réutiliser le currentPlan
         List<Plan> plans = new ArrayList<>();
         for (int i = 0; i < vehicles.size(); i++){
             List<CustomAction> vehiclePlan = currentPlan.get(i);
