@@ -1,6 +1,7 @@
 package auction03;
 
 //the list of imports
+import java.lang.management.MonitorInfo;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
@@ -38,7 +39,7 @@ public class Auction03 implements AuctionBehavior {
     private long timeout_plan;
     private long timeout_setup;
     private Util util;
-
+    private int minCapacity = Integer.MAX_VALUE;
 
     @Override
     public void setup(Topology topology, TaskDistribution distribution,
@@ -69,6 +70,12 @@ public class Auction03 implements AuctionBehavior {
             this.bidPlan.add(new ArrayList<>());
             this.currentPlan.add(new ArrayList<>());
         }
+        for (Vehicle vehicle : agent.vehicles()) {
+            if (vehicle.capacity() < this.minCapacity) {
+                this.minCapacity = vehicle.capacity();
+            }
+        }
+
 
     }
 
@@ -76,6 +83,13 @@ public class Auction03 implements AuctionBehavior {
     public void auctionResult(Task previous, int winner, Long[] bids) {
         if (winner == agent.id()) {
             currentPlan = util.copyPlan(bidPlan);
+            for (List<CustomAction> vehiclePlan : currentPlan) {
+                for (CustomAction action : vehiclePlan) {
+                    if (action.task.id == previous.id) {
+                        action.task = previous;
+                    }
+                }
+            }
             wonTasks.add(previous);
         }
     }
@@ -85,6 +99,10 @@ public class Auction03 implements AuctionBehavior {
         // compute Plan with added task
         // get marginal cost of plan
         // return bid depending on marginal cost
+        if (task.weight > minCapacity) {
+            return null;
+        }
+
         wonTasks.add(task);
         bidPlan = util.ComputePlan(agent.vehicles(),wonTasks);
 
@@ -101,12 +119,9 @@ public class Auction03 implements AuctionBehavior {
     @Override
     public List<Plan> plan(List<Vehicle> vehicles, TaskSet tasks) {
         //Trouver comment réutiliser le currentPlan
-        List<Task> receivedTasks = new ArrayList<>();
-        tasks.iterator().forEachRemaining(receivedTasks::add);
-        List<List<CustomAction>> finalPlan = util.ComputePlan(agent.vehicles(),receivedTasks);
         List<Plan> plans = new ArrayList<>();
         for (int i = 0; i < vehicles.size(); i++){
-            List<CustomAction> vehiclePlan = finalPlan.get(i);
+            List<CustomAction> vehiclePlan = currentPlan.get(i);
             Vehicle vehicle = vehicles.get(i);
             plans.add(util.listToPlan(vehiclePlan,vehicle));
         }
