@@ -66,13 +66,16 @@ public class Util {
 
         int nbIterWithNoChange = 0;
         // Main loop
-        for (int i = 0; i < MAX_ITER; i++) {    // TODO replace by !tasks.size ? (number of permutations regarding ONLY pickup) *const ? (10)
+        int s = tasks.size();
+        int MAX_ITER = 10 * fact(s);
+        int MAX_NEIGHS = 10 * s * s;
+        for (int i = 0; i < MAX_ITER; i++) {
             if (nbIterWithNoChange < 100) {
                 nodePlan = copyPlan(optimalPlan);
             }
 
             // Local exploration to find the "best" neighbour
-            for (int j = 0; j < MAX_NEIGHS; j++) {      // TODO replace by (tasks.size)^2 ? (number of neighbors regarding ONLY pickup) *const ? (10)
+            for (int j = 0; j < MAX_NEIGHS; j++) {
                 neighPlan = copyPlan(nodePlan);
                 update(neighPlan, tasks);
                 if(totalCost(neighPlan) < totalCost(tmpPlan)){
@@ -316,5 +319,12 @@ public class Util {
             }
         }
         return plan;
+    }
+
+    public int fact(int n){
+        if (n <= 1){
+            return 1;
+        }
+        return n * fact(n-1);
     }
 }
