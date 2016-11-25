@@ -173,7 +173,6 @@ public class Util {
         // Get a new vehicle that is able to carry the task
         int taskWeight = task.weight;
 
-        // TODO : Use a lambda function to compute it ??
         List<Vehicle> eligibleVehicles = new ArrayList<>();
         for(Vehicle vehicle : vehicles){
             if(vehicle.capacity() > taskWeight){

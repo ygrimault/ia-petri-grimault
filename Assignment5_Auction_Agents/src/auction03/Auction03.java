@@ -42,12 +42,12 @@ public class Auction03 implements AuctionBehavior {
     private long timeout_bid;
     private Util util;
     private int maxCapacity = Integer.MIN_VALUE;
+    private double taskNumber;
     private double opponentRatio;
     private long lastBid;
     private long minBid;
-    private double taskNumber;
 
-    // Our parameters
+    // Our parameters for the strategy we use
     private double minRatio;
     private double defaultBidRatio;
     @Override
@@ -74,10 +74,12 @@ public class Auction03 implements AuctionBehavior {
         this.distribution = distribution;
         this.agent = agent;
         this.util = new Util(timeout_bid, agent.vehicles());
+
         this.wonTasks = new ArrayList<>();
         this.bidPlan = new ArrayList<>();
         this.currentPlan = new ArrayList<>();
         this.minBid = 2000L;
+
         this.taskNumber = 0;
         this.opponentRatio = 1;
         this.taskNumber = 0.;
@@ -93,16 +95,16 @@ public class Auction03 implements AuctionBehavior {
 
         // Compute the max capacity of our vehicles
         for (Vehicle vehicle : agent.vehicles()){
-            if (vehicle.capacity() > this.maxCapacity) {
-                this.maxCapacity = vehicle.capacity();
-            }
+            this.maxCapacity = Math.max(this.maxCapacity, vehicle.capacity());
         }
 
     }
 
     @Override
     public void auctionResult(Task previous, int winner, Long[] bids) {
-        taskNumber+=1;
+        taskNumber += 1;
+
+        // If we won the bid, we need to update our current status
         if (winner == agent.id()) {
             currentPlan = util.copyPlan(bidPlan);
             wonTasks.add(previous);
@@ -115,16 +117,21 @@ public class Auction03 implements AuctionBehavior {
                 }
             }
         }
+
+        // For our strategy, we use the opponent that made the best bid (unrelated to the fact that we won it or not)
         long minAdversaryBid = Long.MAX_VALUE;
         for (long adversaryBid : bids) {
-            //if (adversaryBid != lastBid && adversaryBid >0 && lastBid!=0) opponentRatio = opponentRatio*(adversaryBid/lastBid);
             if (adversaryBid > 0 && adversaryBid < minAdversaryBid && adversaryBid != lastBid)
                 minAdversaryBid = adversaryBid;
         }
+
+        // We compute the mean of the ratios between our bid and the best of our opponent from start to finish
         if (lastBid != 0) {
             opponentRatio = opponentRatio*(taskNumber-1)/taskNumber + ((double)minAdversaryBid / (double)lastBid)/taskNumber;
         }
-        if (minAdversaryBid < minBid) minBid = minAdversaryBid;
+
+        // We store the best bid ever made to never bid below a certain ratio of it
+        minBid = Math.min(minBid, minAdversaryBid);
     }
 
     @Override
@@ -133,23 +140,24 @@ public class Auction03 implements AuctionBehavior {
         if (task.weight > maxCapacity) {
             return null;
         }
-        // compute Plan with added task
-        // get marginal cost of plan
-        // return bid depending on marginal cost
+
+        // Compute Plan with added task
+        // Get marginal cost of plan
+        // Return bid depending on marginal cost
         wonTasks.add(task);
         bidPlan = util.ComputePlan(currentPlan, task,wonTasks);
 
         double marginalCost = util.totalCost(bidPlan) - util.totalCost(currentPlan);
 
-        double bid = Math.max(minRatio,opponentRatio)*Math.max(minBid*defaultBidRatio,marginalCost);
+        double bid = Math.max(minRatio, opponentRatio) * Math.max(minBid*defaultBidRatio, marginalCost);
 
         wonTasks.remove(task);
+
         lastBid = Math.round(bid);
         System.out.println(""+opponentRatio+","+lastBid);
         return lastBid;
     }
 
-    // TODO : modifier en fonction de la version de Vincent
     @Override
     public List<Plan> plan(List<Vehicle> vehicles, TaskSet tasks) {
         List<Plan> plans = new ArrayList<>();
