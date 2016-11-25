@@ -6,6 +6,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
 
+import jdk.internal.org.objectweb.asm.commons.AdviceAdapter;
 import logist.LogistSettings;
 import logist.Measures;
 import logist.behavior.AuctionBehavior;
@@ -41,7 +42,14 @@ public class Auction03 implements AuctionBehavior {
     private long timeout_bid;
     private Util util;
     private int maxCapacity = Integer.MIN_VALUE;
+    private double opponentRatio;
+    private long lastBid;
+    private long minBid;
+    private double taskNumber;
 
+    // Our parameters
+    private double minRatio;
+    private double defaultBidRatio;
     @Override
     public void setup(Topology topology, TaskDistribution distribution,
                       Agent agent) {
@@ -69,6 +77,13 @@ public class Auction03 implements AuctionBehavior {
         this.wonTasks = new ArrayList<>();
         this.bidPlan = new ArrayList<>();
         this.currentPlan = new ArrayList<>();
+        this.minBid = 2000L;
+        this.taskNumber = 0;
+        this.opponentRatio = 1;
+        this.taskNumber = 0.;
+
+        this.minRatio = 1.05;
+        this.defaultBidRatio = 0.75;
 
         // Initialize plans
         for (int i = 0; i < agent.vehicles().size(); i++) {
@@ -87,10 +102,10 @@ public class Auction03 implements AuctionBehavior {
 
     @Override
     public void auctionResult(Task previous, int winner, Long[] bids) {
+        taskNumber+=1;
         if (winner == agent.id()) {
             currentPlan = util.copyPlan(bidPlan);
             wonTasks.add(previous);
-
             // Make sure the current plan has the task as provided.
             for (List<CustomAction> vehiclePlan : currentPlan) {
                 for (CustomAction action : vehiclePlan) {
@@ -100,6 +115,16 @@ public class Auction03 implements AuctionBehavior {
                 }
             }
         }
+        long minAdversaryBid = Long.MAX_VALUE;
+        for (long adversaryBid : bids) {
+            //if (adversaryBid != lastBid && adversaryBid >0 && lastBid!=0) opponentRatio = opponentRatio*(adversaryBid/lastBid);
+            if (adversaryBid > 0 && adversaryBid < minAdversaryBid && adversaryBid != lastBid)
+                minAdversaryBid = adversaryBid;
+        }
+        if (lastBid != 0) {
+            opponentRatio = opponentRatio*(taskNumber-1)/taskNumber + ((double)minAdversaryBid / (double)lastBid)/taskNumber;
+        }
+        if (minAdversaryBid < minBid) minBid = minAdversaryBid;
     }
 
     @Override
@@ -116,12 +141,12 @@ public class Auction03 implements AuctionBehavior {
 
         double marginalCost = util.totalCost(bidPlan) - util.totalCost(currentPlan);
 
-        //Adapter le bid pour qu'il soit supérieur au marginalcost pour faire du bénef
-        double bid = marginalCost;
+        double bid = Math.max(minRatio,opponentRatio)*Math.max(minBid*defaultBidRatio,marginalCost);
 
         wonTasks.remove(task);
-
-        return (long) Math.round(bid);
+        lastBid = Math.round(bid);
+        System.out.println(""+opponentRatio+","+lastBid);
+        return lastBid;
     }
 
     // TODO : modifier en fonction de la version de Vincent
@@ -133,7 +158,8 @@ public class Auction03 implements AuctionBehavior {
             Vehicle vehicle = vehicles.get(i);
             plans.add(util.listToPlan(vehiclePlan,vehicle));
         }
-
+        System.out.println(util.totalCost(currentPlan));
+        System.out.println(tasks.rewardSum());
         return plans;
     }
 }
