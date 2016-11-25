@@ -67,8 +67,8 @@ public class Util {
         int nbIterWithNoChange = 0;
         // Main loop
         int s = tasks.size();
-        int MAX_ITER = 10 * fact(s);
-        int MAX_NEIGHS = 10 * s * s;
+        int MAX_ITER = Math.min(10 * fact(s), 100000);
+        int MAX_NEIGHS = Math.min(10 * s * s, 100);
         for (int i = 0; i < MAX_ITER; i++) {
             if (nbIterWithNoChange < 100) {
                 nodePlan = copyPlan(optimalPlan);

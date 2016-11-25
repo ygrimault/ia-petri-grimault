@@ -80,7 +80,7 @@ public class Auction03 implements AuctionBehavior {
         this.currentPlan = new ArrayList<>();
         this.minBid = 2000L;
 
-        this.taskNumber = 0;
+        this.taskNumber = 0.;
         this.opponentRatio = 1;
         this.taskNumber = 0.;
 
@@ -102,7 +102,7 @@ public class Auction03 implements AuctionBehavior {
 
     @Override
     public void auctionResult(Task previous, int winner, Long[] bids) {
-        taskNumber += 1;
+        taskNumber += 1.;
 
         // If we won the bid, we need to update our current status
         if (winner == agent.id()) {

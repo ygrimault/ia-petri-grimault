@@ -1,0 +1,113 @@
+\documentclass[11pt]{article}
+
+\usepackage{amsmath}
+\usepackage{textcomp}
+\usepackage{listings}
+\usepackage[top=0.8in, bottom=0.8in, left=0.8in, right=0.8in]{geometry}
+% add other packages here
+
+% put your group number and names in the author field
+\title{\bf Exercise 5: An Auctioning Agent for the Pickup and Delivery Problem}
+\author{Group \textnumero: Student 1, Student 2}
+
+\begin{document}
+\maketitle
+
+\section{Bidding strategy}
+% describe in details your bidding strategy. Also, focus on answering the following questions:
+% - do you consider the probability distribution of the tasks in defining your strategy? How do you speculate about the future tasks that might be auctions?
+% - how do you use the feedback from the previous auctions to derive information about the other competitors?
+% - how do you combine all the information from the probability distribution of the tasks, the history and the planner to compute bids?
+Our bidding strategy only takes into account the best bidding of our opponents at each round. At each round we compute the ratio between our bid and the best bid, and we use it to compute its mean over all past rounds.
+
+Using this mean ratio, we multiply our marginal cost (the total cost of the optimal plans we computed with the tasks we already won and the one put to auction) by this ratio, with a minimum ratio of \textsc{minRatio}, and a minimal marginal cost of \textsc{minBid} * \textsc{defaultBidRatio}.
+
+\section{Results}
+% in this section, you describe several results from the experiments with your auctioning agent
+
+\subsection{Experiment 1: Comparisons with dummy agents}
+% in this experiment you observe how the results depends on the number of tasks auctioned. You compare with some dummy agents and potentially several versions of your agent (with different internal parameter values). 
+
+\subsubsection{Setting}
+% you describe how you perform the experiment, the environment and description of the agents you compare with
+Our first experiment is to compare our agent with the dummy random agent provided with the stub of this assignment.
+
+The settings of this experiment where as follow :
+
+\begin{lstlisting}
+tasks number = 10
+minRatio = 1.05
+defaultBidRatio = 0.75
+minBid = 2000
+\end{lstlisting}
+
+The other variables are not important, or didn't change from the settings given.
+
+\subsubsection{Observations}
+% you describe the experimental results and the conclusions you inferred from these results
+The results were :
+
+\begin{lstlisting}
+	<statistics>
+		<stat rank="1" agent="auction-main-03">
+			<total-tasks value="8"/>
+			<total-distance value="1104.4"/>
+			<total-cost value="5522"/>
+			<total-reward value="19328"/>
+			<total-profit value="13806"/>
+		</stat>
+		<stat rank="2" agent="auction-random">
+			<total-tasks value="2"/>
+			<total-distance value="725.6"/>
+			<total-cost value="3628"/>
+			<total-reward value="4242"/>
+			<total-profit value="614"/>
+		</stat>
+	</statistics>
+\end{lstlisting}
+
+We can see that we did quite nice against this dummy agent. However, the last tasks had a ratio higher than before, explaining why we lost it. However, we would have most likely won the next one.
+
+\subsection{Experiment 2}
+% other experiments you would like to present (for example, varying the internal parameter values)
+
+\subsubsection{Setting}
+
+Our next experiment is to compare our agent with our own agent.
+
+The settings of this experiment where as follow :
+
+\begin{lstlisting}
+tasks number = 10
+minRatio = 1.05
+defaultBidRatio = 0.75
+minBid = 2000
+\end{lstlisting}
+
+The other variables are not important, or didn't change from the settings given.
+
+\subsubsection{Observations}
+The results were :
+
+\begin{lstlisting}
+	<statistics>
+		<stat rank="1" agent="auction-main-03">
+			<total-tasks value="7"/>
+			<total-distance value="1274.4"/>
+			<total-cost value="6372"/>
+			<total-reward value="13939"/>
+			<total-profit value="7567"/>
+		</stat>
+		<stat rank="2" agent="auction-main-03">
+			<total-tasks value="3"/>
+			<total-distance value="572.7"/>
+			<total-cost value="2864"/>
+			<total-reward value="3835"/>
+			<total-profit value="971"/>
+		</stat>
+	</statistics>
+\end{lstlisting}
+
+In this experiment, we saw that one of the 2 agents had a bad start, and tried desperately to get back to the level of the other one. He started to manage that near the end, but was still short a few tasks.
+
+\end{document}
